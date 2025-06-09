@@ -1,0 +1,22 @@
+.draft-container {
+    padding: 35px 0;
+    /* min-width: 54rem; */
+}
+
+.draft-main {
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.draft-header {
+    display: flex;
+    align-items: center;
+    border-radius: 10px;
+    background-color: var(--card-background-color);
+    box-shadow: 0 0 3px 0 rgba(0, 0, 0, 0.1);
+    font-size: 2.2rem;
+    color: #007fff;
+    padding: 10px 30px;
+}

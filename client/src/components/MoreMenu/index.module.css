@@ -1,0 +1,35 @@
+.more-menu {
+    position: relative;
+}
+.more-menu-button {
+    background-color: var(--card-background-color);
+    border: none;
+    cursor: pointer;
+    position: relative;
+    width: 50px;
+    height: 25px;
+}
+.antIcon {
+    font-size: 1.6rem;
+    background-color: var(--card-background-color);
+    color: var(--card-text-color-tertiary);
+}
+.more-menu-list {
+    width: 75px;
+    height: auto;
+    position: absolute;
+    top: 25px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 5px;
+    background-color: var(--card-background-color);
+    box-shadow: 0 0 3px 0 rgba(0, 0, 0, 0.1);
+}
+.more-menu-item {
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    color: var(--card-text-color-secondary);
+    background-color: transparent;
+}
+

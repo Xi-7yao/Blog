@@ -1,0 +1,46 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  scrollbar-width: auto;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+:root {
+  --body-background-color: #f5f5fa;
+  --accent-text-color: #34495e;
+  --body-text-color: #707070;
+  --card-background-color: #ffffff;
+  --card-text-color-main: #000000;
+  --card-text-color-secondary: #747474;
+  --card-text-color-tertiary: #767676;
+  --scrollbar-thumb: hsl(0, 0%, 85%);
+  --card-separator-color: rgba(218, 218, 218, 0.5);
+  --login-background-color: #ffffff;
+  --login-underline: rgba(228, 230, 235, 0.5);
+  --juejin-font: #252933;
+}
+
+html {
+  font-size: 62.5%;
+  line-height: 1.15;
+  scroll-behavior: smooth;
+}
+body {
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+[data-theme="dark"] {
+  --body-background-color: #303030;
+  --accent-text-color: #ecf0f1;
+  --body-text-color: rgba(255, 255, 255, 0.7);
+  --card-background-color: #424242;
+  --card-text-color-main: rgba(255, 255, 255, 0.9);
+  --card-text-color-secondary: rgba(255, 255, 255, 0.7);
+  --card-text-color-tertiary: rgba(255, 255, 255, 0.5);
+}
+a {
+  text-decoration: none;
+  color: var(--accent-text-color);
+}

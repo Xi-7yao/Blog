@@ -1,0 +1,36 @@
+.inputContainer {
+    background-color: var(--background-color);
+    position: relative;
+}
+.searchLabel {
+    position: absolute;
+    font-size: 1.4rem;
+    top: 10px;
+    inset-inline-start: 20px;
+    color: var(--card-text-color-tertiary);
+}
+.searchInput {
+    padding: 40px 20px 15px;
+    font-size: 1.8rem;
+    border-radius: 10px;
+    width: 100%;
+    border: 0;
+    outline: none;
+    box-shadow: 0px 0px 4px rgba(0, 0, 0, 0.2);
+    background-color: var(--card-background-color);
+    color: var(--card-text-color-main);
+}
+.searchButton {
+    position: absolute;
+    inset-inline-end: 0px;
+    top: 0px;
+    height: 100%;
+    padding: 0 20px;
+    width: auto;
+    border: 0;
+    background-color: transparent;
+    color: var(--card-text-color-main);
+}
+.searchIcon {
+    font-size: 20px;
+}

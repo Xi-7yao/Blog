@@ -1,0 +1,10 @@
+.bytemd {
+  color: var(--card-text-color-main);
+  height: calc(100vh - 64px);
+}
+.bytemd-editor .CodeMirror {
+  background-color: #f8f9fa;
+}
+.bytemd-preview .markdown-body {
+  margin: 24px 10px;
+}

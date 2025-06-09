@@ -1,0 +1,51 @@
+.layoutContainer {
+    background-color: var(--body-background-color);
+    min-height: 100vh;
+    max-width: 100vw;
+    padding: 0 20px;
+    display: flex;
+    gap: 40px;
+}
+.sidebarLeftContainer {
+    height: 100vh;
+    position: sticky;
+    top: 0;
+}
+.mainContainer {
+    height: auto;
+}
+
+@media (min-width: 1280px) {
+    .sidebarLeftContainer {
+        width: 15%;
+    }
+    .mainContainer {
+        width: 85%;
+    }
+}
+@media (min-width: 1024px) and (max-width: 1279px) {
+    .sidebarLeftContainer {
+        width: 20%;
+    }
+    .mainContainer {
+        width: 80%;
+    }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+    .sidebarLeftContainer {
+        width: 30%;
+    }
+    .mainContainer {
+        width: 70%;
+    }
+}
+@media (max-width: 767px) {
+    .sidebarLeftContainer {
+        width: 0;
+        overflow: hidden;
+    }
+    .mainContainer {
+        width: 100%;
+    }
+}
+

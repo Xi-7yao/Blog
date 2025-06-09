@@ -1,0 +1,89 @@
+.login-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 50;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .login-container {
+    border-radius: 8px;
+    box-shadow: 0 0 2px 0 rgba(0, 0, 0, 0.1);
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    min-width: 450px;
+    z-index: 51;
+  }
+  
+  .login-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.67rem 2.33rem;
+    border-bottom: 2px solid var(--login-underline);
+  }
+  
+  .login-text {
+    font-size: 1.67rem;
+    color: var(--login-font);
+    line-height: 2.33rem;
+  }
+  
+  .close-icon {
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: var(--login-font);
+  }
+  
+  .close-icon:hover {
+    color: #333;
+  }
+  
+  .login-body {
+    padding: 1.67rem 2.33rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.3rem;
+  }
+  
+  .login-title {
+    font-size: 1.8rem;
+    font-weight: bold;
+    text-align: center;
+    color: var(--login-font);
+  }
+  
+  .error-message {
+    color: #ff4d4f;
+    text-align: center;
+    font-size: 1rem;
+  }
+  
+  .login-form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .button-group {
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+  }
+  
+  .submit-button {
+    height: 4rem;
+    font-size: 1.5rem;
+    flex: 1;
+  }
+  
+  /* 自定义输入框 */
+  .custom-input {
+    height: 48px !important;
+    font-size: 16px !important;
+    padding: 12px !important;
+    color: #595959 !important;
+    border-radius: 4px;
+  }

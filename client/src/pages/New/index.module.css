@@ -1,0 +1,146 @@
+.new-container {
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--body-background-color);
+  display: flex;
+  flex-direction: column;
+}
+
+.new-header {
+  width: 100%;
+  height: 64px;
+  padding: 0 35px;
+  background-color: var(--card-background-color);
+  display: flex;
+  align-items: center;
+  gap: 150px;
+}
+
+.new-input {
+  width: 70%;
+  height: 100%;
+  border: none;
+  outline: none;
+  font-size: 2.4rem;
+  background-color: transparent;
+  color: var(--body-text-color);
+}
+
+.new-button-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: auto;
+}
+
+.new-button {
+  width: 64px;
+  height: 32px;
+  background-color: #1d7dfa;
+  border: 1px solid #1d7dfa;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.4rem;
+  transition: transform 0.2s ease;
+}
+
+.new-button:hover {
+  transform: scale(1.05);
+}
+
+.save-status-idle {
+  color: #999;
+  font-size: 12px;
+}
+
+.save-status-saving {
+  color: #1890ff;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.save-status-saved {
+  color: #52c41a;
+  font-size: 12px;
+}
+
+.new-main {
+  flex: 1;
+}
+
+.publish-modal .ant-modal-content {
+  background-color: var(--card-background-color);
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease;
+}
+
+.publish-form {
+  margin-top: 20px;
+}
+
+.publish-form .ant-form-item {
+  margin-bottom: 15px;
+}
+
+.publish-form .ant-input,
+.publish-form .ant-select-selector,
+.publish-form .ant-input-textarea {
+  border-radius: 8px;
+  font-size: 1.4rem;
+}
+
+.modal-button-group {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modal-button-group .ant-btn {
+  border-radius: 8px;
+  height: 40px;
+  font-size: 1.4rem;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 767px) {
+  .new-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 0 20px;
+  }
+  .new-input {
+    width: 100%;
+    font-size: 2rem;
+  }
+  .new-button-container {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .new-button {
+    width: 80px;
+    font-size: 1.2rem;
+  }
+  .save-status-idle,
+  .save-status-saving,
+  .save-status-saved {
+    font-size: 10px;
+  }
+  .publish-modal .ant-modal-content {
+    max-width: 300px;
+  }
+}
