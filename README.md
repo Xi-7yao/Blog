@@ -23,8 +23,6 @@
 
 - 前端：React, TypeScript, CSS
 - 后端：Node.js, Express
-- 数据库：可根据需求选择（如 MongoDB、MySQL 等）
-- 版本控制：Git + GitHub
-
+- 数据库：MongoDB
 ---
 
