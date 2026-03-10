@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom"
 import styles from './index.module.css'
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../context/useTheme";
 import SidebarLeft from "../SidebarLeft";
 import { useEffect, useState } from "react";
 import { fetchArticles } from "../../redux/slices/articlesSlice";

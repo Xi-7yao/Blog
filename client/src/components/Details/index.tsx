@@ -1,46 +1,57 @@
 import styles from './index.module.css';
 import { Article } from '../../type/articles';
 import MoreMenu from '../MoreMenu';
-import { CalendarOutlined } from '@ant-design/icons';
+import { CalendarOutlined, EyeOutlined } from '@ant-design/icons';
+import { Link } from 'react-router-dom';
 
-const Details = ({article, showMenu = true, toUrl}: {article: Article, showMenu?: boolean, toUrl?: string}) => {
+const Details = ({
+    article,
+    showMenu = true,
+    toUrl,
+    descriptionOverride,
+}: {
+    article: Article,
+    showMenu?: boolean,
+    toUrl?: string,
+    descriptionOverride?: string,
+}) => {
     const url = toUrl? toUrl: `/article/${article.articleId}`;
 
     return (
         <article className={styles['article-item']}>
-            <header>
-                <div className={styles['article-header']}>
-                    <header className={styles['article-tag-list']}>
+            <div className={styles['article-header']}>
+                    <div className={styles['article-tag-list']}>
                         { article.meta.tags.map((tag) => (
-                            <a key={tag} 
-                                href='/' 
-                                className={styles['article-tag-item']} 
-                            >
+                            <span key={tag} className={styles['article-tag-item']}>
                                 { tag }
-                            </a>
+                            </span>
                         )) }
-                    </header>
+                    </div>
                     <div className={styles['article-title']}>
                         <h2>
-                            <a href={url}>{ article.meta.title }</a>
+                            <Link to={url}>{ article.meta.title }</Link>
                         </h2>
                         <h3>
-                            { article.description }
+                            { descriptionOverride ?? article.description }
                         </h3>
                     </div>
                     <footer className={styles['article-footer']}>
-                        <div className={styles['article-date']}>
-                            <CalendarOutlined 
-                                style={{fontSize: '16px'}}
-                            />
-                            <time dateTime={article.meta.createdAt}>
-                                { new Date(article.meta.createdAt || '')
-                                    .toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: '2-digit',
-                                    year: 'numeric',
-                                })}
-                            </time>
+                        <div className={styles['article-meta-group']}>
+                            <div className={styles['article-date']}>
+                                <CalendarOutlined className={styles['article-meta-icon']} />
+                                <time dateTime={article.meta.createdAt}>
+                                    { new Date(article.meta.createdAt || '')
+                                        .toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: '2-digit',
+                                        year: 'numeric',
+                                    })}
+                                </time>
+                            </div>
+                            <div className={styles['article-date']}>
+                                <EyeOutlined className={styles['article-meta-icon']} />
+                                <span>{article.stats?.views ?? 0}</span>
+                            </div>
                         </div>
                         { showMenu && (
                             <div className={styles['article-more']}>
@@ -51,8 +62,7 @@ const Details = ({article, showMenu = true, toUrl}: {article: Article, showMenu?
                             {article.meta.category}
                         </div>
                     </footer>
-                </div>
-            </header>
+            </div>
         </article>
     )
 };

@@ -5,57 +5,61 @@ import { AppDispatch, RootState } from '../../redux/store';
 import { useEffect, useMemo, useState } from 'react';
 import Details from '../../components/Details';
 import { useNavigate, useParams } from 'react-router-dom';
-import { setSelectedCategory } from '../../redux/slices/articlesSlice';
+import { CATEGORY_ALL, setSelectedCategory } from '../../redux/slices/articlesSlice';
 
 const Home = () => {
   const articles = useSelector((state: RootState) => state.articles.articles);
   const categories = useSelector((state: RootState) => state.articles.categories);
   const selectedCategory = useSelector((state: RootState) => state.articles.selectedCategory);
   const status = useSelector((state: RootState) => state.articles.status);
-  const [isMobile, setIsMobile] = useState(window.innerWidth > 1024);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1024);
   const { category } = useParams<{ category?: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  // useEffect(()=>{
-  //   const 
-  // },[])
-
   useEffect(() => {
     if (category && categories.includes(category) && category !== selectedCategory) {
       dispatch(setSelectedCategory(category));
-    } else if (!category && selectedCategory !== '综合') {
-      dispatch(setSelectedCategory('综合'));
-    } else if (category && !categories.includes(category)) {
-      dispatch(setSelectedCategory('综合'));
+      return;
+    }
+
+    if (!category && selectedCategory !== CATEGORY_ALL) {
+      dispatch(setSelectedCategory(CATEGORY_ALL));
+      return;
+    }
+
+    if (category && !categories.includes(category)) {
+      dispatch(setSelectedCategory(CATEGORY_ALL));
       navigate('/');
     }
   }, [category, categories, selectedCategory, dispatch, navigate]);
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth > 1024);
+      setIsDesktop(window.innerWidth > 1024);
     };
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const articlesArray = Object.values(articles).filter((article) => article.published === true).sort((a, b) => parseInt(b.meta.updatedAt as string) - parseInt(a.meta.updatedAt as string));
+  const articlesArray = Object.values(articles)
+    .filter((article) => article.published)
+    .sort(
+      (a, b) =>
+        new Date(b.meta.updatedAt || '').getTime() - new Date(a.meta.updatedAt || '').getTime()
+    );
 
-  // useEffect(() => {
-  //   console.log(articlesArray);
-  // }, [articlesArray]);
+  const filteredArticles = useMemo(() => {
+    if (selectedCategory === CATEGORY_ALL) {
+      return articlesArray;
+    }
 
-  const filteredArticles = useMemo(
-    () =>
-      selectedCategory === '综合'
-        ? articlesArray
-        : articlesArray.filter((article) => article.meta?.category === selectedCategory),
-    [articlesArray, selectedCategory]
-  );
+    return articlesArray.filter((article) => article.meta.category === selectedCategory);
+  }, [articlesArray, selectedCategory]);
 
   if (status === 'loading') {
-    return <div className={styles['loading']}>加载中...</div>;
+    return <div className={styles['noArticles']}>加载中...</div>;
   }
 
   return (
@@ -64,14 +68,15 @@ const Home = () => {
         <section className={styles['articleList']}>
           {filteredArticles.length > 0 ? (
             filteredArticles.map((article) => (
-              <Details key={article.articleId} article={article} showMenu={false}/>
+              <Details key={article.articleId} article={article} showMenu={false} />
             ))
           ) : (
-            <div className={styles['noArticles']}>暂无 {selectedCategory} 类别的文章</div>
+            <div className={styles['noArticles']}>暂无 {selectedCategory} 分类的文章</div>
           )}
         </section>
       </main>
-      {isMobile ? (
+
+      {isDesktop ? (
         <div className={styles['sidebarRightContainer']}>
           <SidebarRight />
         </div>

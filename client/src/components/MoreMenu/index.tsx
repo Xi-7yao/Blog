@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
     import styles from './index.module.css';
     import { EllipsisOutlined } from '@ant-design/icons';
-    import { message } from 'antd';
-    import { useDispatch } from 'react-redux';
-    import { AppDispatch } from '../../redux/store';
-    import { deleteArticle, fetchArticles } from '../../redux/slices/articlesSlice';
+import { message } from 'antd';
+import { useDispatch } from 'react-redux';
+import { AppDispatch } from '../../redux/store';
+import { deleteArticle, fetchArticles } from '../../redux/slices/articlesSlice';
+import { useNavigate } from 'react-router-dom';
 
     const MoreMenu = ({ id }: { id: string }) => {
         const [isOpen, setIsOpen] = useState(false);
         const menuRef = useRef<HTMLDivElement>(null);
         const dispatch = useDispatch<AppDispatch>();
+        const navigate = useNavigate();
 
         useEffect(() => {
             const handleClickOutside = (event: MouseEvent) => {
@@ -24,7 +26,7 @@ import { useEffect, useRef, useState } from 'react';
         }, []);
 
         const handleEdit = () => {
-            window.location.href = `/edit/${id}`;
+            navigate(`/edit/${id}`);
             setIsOpen(false);
         };
 
@@ -36,7 +38,7 @@ import { useEffect, useRef, useState } from 'react';
             await dispatch(deleteArticle(id)).unwrap(); // 使用 deleteArticle
             await dispatch(fetchArticles({ page: 1, limit: 10 })).unwrap(); // 确保获取最新数据
             message.success('文章删除成功');
-            } catch (error) {
+            } catch {
             // console.error('Delete error:', error);
             message.error('删除失败');
             }

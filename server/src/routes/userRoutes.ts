@@ -7,14 +7,16 @@ import {
   refreshToken,
   updateUsername,
 } from '../controllers/userController';
+import { authMiddleware } from '../middleware/auth';
+import { authRateLimiter, writeRateLimiter } from '../middleware/rateLimit';
 
 const router = express.Router();
 
-router.route('/register').post(register);
-router.route('/login').post(login);
-router.route('/me').get(getUser);
-router.route('/logout').post(logout);
-router.route('/refresh').post(refreshToken);
-router.route('/updateUsername').post(updateUsername);
+router.route('/register').post(authRateLimiter, register);
+router.route('/login').post(authRateLimiter, login);
+router.route('/me').get(authMiddleware, getUser);
+router.route('/logout').post(authMiddleware, logout);
+router.route('/refresh').post(authRateLimiter, refreshToken);
+router.route('/updateUsername').post(authMiddleware, writeRateLimiter, updateUsername);
 
 export default router;

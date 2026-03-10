@@ -8,12 +8,17 @@ export interface ArticleMeta {
   updatedAt?: string;
 }
 
+export interface ArticleStats {
+  views: number;
+}
+
 export interface Article {
   articleId: string;
   meta: ArticleMeta;
   description: string;
   content: string;
   published: boolean;
+  stats?: ArticleStats;
 }
 
 export interface CreateArticleRequest {
@@ -23,12 +28,22 @@ export interface CreateArticleRequest {
   published?: boolean;
 }
 
-export interface updateArticleRequest extends CreateArticleRequest {
-  
-}
+export type updateArticleRequest = CreateArticleRequest;
 
 export interface PaginatedResponse {
   articles: Article[];
+  total: number;
+}
+
+export interface SearchArticleResult {
+  article: Article;
+  snippet: string;
+  score: number;
+}
+
+export interface SearchArticlesResponse {
+  keyword: string;
+  results: SearchArticleResult[];
   total: number;
 }
 
@@ -37,6 +52,4 @@ export interface Image {
   id: string;
 }
 
-export interface currentArticle extends Article {
-  
-}
+export type currentArticle = Article;

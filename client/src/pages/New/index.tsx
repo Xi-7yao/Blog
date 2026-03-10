@@ -1,7 +1,9 @@
 import styles from './index.module.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AxiosError } from 'axios';
 import { createArticleApi, deleteImagesApi, getArticleByIdApi, updateArticleApi, uploadImagesApi } from '../../api/articlesApi';
 import { CreateArticleRequest, Image } from '../../type/articles';
+import { ErrorResponse } from '../../type/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
@@ -12,11 +14,10 @@ import 'github-markdown-css/github-markdown.css';
 import './MarkdownEditor.css';
 import { BytemdPlugin } from 'bytemd';
 import zhHans from 'bytemd/locales/zh_Hans.json';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import LoginModal from '../../components/Login';
 import { Button, Form, Input, Modal, Select, message, Spin } from 'antd';
 
-// 临时图片类型
 interface TempImage {
   id?: string;
   url: string;
@@ -24,12 +25,91 @@ interface TempImage {
   alt?: string;
 }
 
-// 保存状态类型
+interface PublishFormValues {
+  title: string;
+  category: string;
+  tags?: string[];
+  description?: string;
+}
+
 type SaveStatus = 'idle' | 'saving' | 'saved';
 
-// 常量
-const MIN_SAVING_DURATION = 700; // saving 状态最小持续时间（ms）
-const SAVE_STATUS_RESET_DELAY = 5000; // saved -> idle 延迟（ms）
+const MIN_SAVING_DURATION = 700;
+const SAVE_STATUS_RESET_DELAY = 5000;
+
+const getApiErrorCode = (error: unknown) => {
+  const axiosError = error as AxiosError<ErrorResponse>;
+  return axiosError.response?.data?.error?.code || 'UNKNOWN';
+};
+
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  const axiosError = error as AxiosError<ErrorResponse>;
+  return axiosError.response?.data?.error?.message || fallback;
+};
+
+const shouldOpenLogin = (error: unknown) => {
+  const errorCode = getApiErrorCode(error);
+  return errorCode === 'MISSING_TOKEN' || errorCode === 'TOKEN_EXPIRED' || errorCode === 'UNAUTHORIZED';
+};
+
+const normalizeImageDeletePayload = (images: TempImage[]): Image[] =>
+  images.map((image, index) => ({
+    id: image.id || `${index}`,
+    url: image.url.split('/').pop() as string,
+  }));
+
+const buildArticlePayload = ({
+  title,
+  username,
+  userId,
+  tags,
+  category,
+  content,
+  description,
+  published,
+}: {
+  title: string;
+  username: string;
+  userId: string;
+  tags: string[];
+  category: string;
+  content: string;
+  description: string;
+  published: boolean;
+}): CreateArticleRequest => ({
+  meta: {
+    title,
+    username,
+    userId,
+    tags,
+    category,
+  },
+  content,
+  description,
+  published,
+});
+
+const debounce = <Args extends unknown[]>(
+  func: (...args: Args) => void | Promise<void>,
+  wait: number
+) => {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  return (...args: Args) => {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+
+    timeout = setTimeout(() => {
+      void func(...args);
+      timeout = null;
+    }, wait);
+  };
+};
 
 const New = () => {
   const { articleId } = useParams();
@@ -42,228 +122,212 @@ const New = () => {
   const [deleteTempImages, setDeleteTempImages] = useState<TempImage[]>([]);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [hasCreatedArticle, setHasCreatedArticle] = useState(!!articleId);
-  const [isCreatingDraft, setIsCreatingDraft] = useState(false); // 新增：创建锁
+  const [isCreatingDraft, setIsCreatingDraft] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [currentArticleId, setCurrentArticleId] = useState<string | undefined>(articleId);
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<PublishFormValues>();
   const navigate = useNavigate();
   const { user, isLoginOpen, setIsLoginOpen } = useAuth();
   const categories = useSelector((state: RootState) => state.articles.categories);
   const plugins: BytemdPlugin[] = [gfm()];
-  const timeoutRef = useRef<number | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userRef = useRef(user);
 
   useEffect(() => {
     userRef.current = user;
   }, [user]);
 
-  // 防抖函数
-  const debounce = <T extends (...args: any[]) => void>(
-    func: T,
-    wait: number
-  ): ((...args: Parameters<T>) => void) => {
-    let timeout: ReturnType<typeof setTimeout> | null = null;
-
-    return (...args: Parameters<T>) => {
-      if (timeout !== null) {
-        clearTimeout(timeout);
-      }
-      timeout = setTimeout(() => {
-        func(...args);
-        timeout = null;
-      }, wait);
-    };
-  };
-
-  // 创建草稿
   const createDraft = async (title: string, content: string) => {
-    // const key = 'createDraft';
-    if (!userRef.current) {
-      setIsLoginOpen(true);
+    if (!userRef.current || isCreatingDraft) {
+      if (!userRef.current) {
+        setIsLoginOpen(true);
+      }
       return;
     }
-    if (isCreatingDraft) {
-      return;
-    }
-    setIsCreatingDraft(true); // 设置锁
+
+    setIsCreatingDraft(true);
     setSaveStatus('saving');
+
     try {
       const startTime = Date.now();
-      const article: CreateArticleRequest = {
-        meta: {
-          title: title || '输入文章标题...',
-          username: userRef.current.username,
-          userId: userRef.current.userId,
-          tags: tags,
-          category: category || '综合',
-        },
+      const article = buildArticlePayload({
+        title: title || '输入文章标题...',
+        username: userRef.current.username,
+        userId: userRef.current.userId,
+        tags,
+        category: category || '综合',
         content: content || '',
         description: description || '未填写描述',
         published: false,
-      };
+      });
+
       const res = await createArticleApi(article);
       const newArticleId = res.articleId;
       setHasCreatedArticle(true);
       setCurrentArticleId(newArticleId);
       navigate(`/edit/${newArticleId}`, { replace: true });
-      
+
       const duration = Date.now() - startTime;
       if (duration < MIN_SAVING_DURATION) {
         await new Promise((resolve) => setTimeout(resolve, MIN_SAVING_DURATION - duration));
       }
+
       setSaveStatus('saved');
       if (timeoutRef.current !== null) {
         clearTimeout(timeoutRef.current);
       }
+
       timeoutRef.current = setTimeout(() => {
         setSaveStatus('idle');
         timeoutRef.current = null;
       }, SAVE_STATUS_RESET_DELAY);
-      saveDraft(article, newArticleId);
-    } catch (error: any) {
-      const errorCode = error.response?.data?.error?.code || 'UNKNOWN';
-      if (errorCode === 'MISSING_TOKEN' || errorCode === '401 Unauthorized') {
+
+      await saveDraft(article, newArticleId);
+    } catch (error: unknown) {
+      if (shouldOpenLogin(error)) {
         setIsLoginOpen(true);
       } else {
-        message.error(`创建草稿失败：${error.message || '未知错误'}`);
+        message.error(`创建草稿失败：${getApiErrorMessage(error, '未知错误')}`);
       }
     } finally {
-      setIsCreatingDraft(false); // 释放锁
+      setIsCreatingDraft(false);
     }
   };
 
-  // 防抖创建草稿
   const debouncedCreateDraft = useRef(
     debounce((title: string, content: string) => {
-      createDraft(title, content);
+      void createDraft(title, content);
     }, 1000)
   ).current;
 
-  // 处理标题输入
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setSearchValue(newValue);
+
     if (!userRef.current) {
       setIsLoginOpen(true);
       return;
     }
+
     if (!currentArticleId && !hasCreatedArticle && newValue.trim() && !isCreatingDraft) {
       debouncedCreateDraft(newValue, value);
     }
   };
 
-  // 处理内容变化
   const handleChange = (newValue: string) => {
     setValue(newValue);
-    const deleteImages = tempImages.filter((image) => !newValue.includes(image.url));
-    for (let image of deleteImages) {
-      image.url = image.url.split('/').pop() as string;
-    }
-    setDeleteTempImages(deleteImages);
+
+    const imagesToDelete = tempImages
+      .filter((image) => !newValue.includes(image.url))
+      .map((image) => ({
+        ...image,
+        url: image.url.split('/').pop() as string,
+      }));
+
+    setDeleteTempImages(imagesToDelete);
+
     if (!userRef.current) {
       setIsLoginOpen(true);
       return;
     }
+
     if (!currentArticleId && !hasCreatedArticle && newValue.trim() && !isCreatingDraft) {
       debouncedCreateDraft(searchValue, newValue);
     }
   };
 
-  // 上传图片
   const handleUploadImages = async (files: File[]): Promise<TempImage[]> => {
     const file = files[0];
     const formData = new FormData();
     formData.append('img', file);
+
     try {
       const url = await uploadImagesApi(formData);
       const newImage: TempImage = { title: file.name, url, alt: undefined };
       setTempImages((prev) => [...prev, newImage]);
       return [newImage];
-    } catch (error: any) {
-      const errorCode = error.response?.data?.error?.code || 'UNKNOWN';
-      if (errorCode === 'MISSING_TOKEN' || errorCode === '401 Unauthorized') {
+    } catch (error: unknown) {
+      if (shouldOpenLogin(error)) {
         setIsLoginOpen(true);
       } else {
         message.error('图片上传失败');
       }
+
       return [];
     }
   };
 
-  // 清理所有临时图片
   const cleanupAllTempImages = useCallback(async () => {
-    if (tempImages.length > 0) {
-      const imagesToDelete = tempImages.map((image) => ({
-        ...image,
-        url: image.url.split('/').pop() as string,
-      }));
-      try {
-        await deleteImagesApi(imagesToDelete as Image[]);
-        setTempImages([]);
-      } catch (error) {
-      }
+    if (tempImages.length === 0) {
+      return;
+    }
+
+    try {
+      await deleteImagesApi(normalizeImageDeletePayload(tempImages));
+      setTempImages([]);
+    } catch {
+      message.warning('部分临时图片未能及时清理');
     }
   }, [tempImages]);
 
-  // 清理未使用图片
   const cleanupUnusedImages = useCallback(async () => {
-    if (deleteTempImages.length > 0) {
-      const imagesToDelete = deleteTempImages.map((image) => ({
-        ...image,
-        url: image.url.split('/').pop() as string,
-      }));
-      try {
-        await deleteImagesApi(imagesToDelete as Image[]);
-        setDeleteTempImages([]);
-      } catch (error) {
-      }
+    if (deleteTempImages.length === 0) {
+      return;
+    }
+
+    try {
+      await deleteImagesApi(normalizeImageDeletePayload(deleteTempImages));
+      setDeleteTempImages([]);
+    } catch {
+      message.warning('部分未使用图片清理失败');
     }
   }, [deleteTempImages]);
 
-  // 跳转草稿箱
   const handleDrafts = () => {
     if (!userRef.current) {
       setIsLoginOpen(true);
       return;
     }
+
     navigate(`/user/${userRef.current.userId}/drafts`);
   };
 
-  // 发布文章
   const handlePublish = () => {
     if (!userRef.current) {
       setIsLoginOpen(true);
       return;
     }
+
     form.setFieldsValue({ title: searchValue, description, tags, category });
     setIsPublishModalOpen(true);
   };
 
-  // 确认发布
-  const handlePublishConfirm = async (values: any) => {
+  const handlePublishConfirm = async (values: PublishFormValues) => {
     if (!userRef.current) {
       setIsLoginOpen(true);
       return;
     }
+
     try {
       await cleanupUnusedImages();
-      const article: CreateArticleRequest = {
-        meta: {
-          title: values.title,
-          username: userRef.current.username,
-          userId: userRef.current.userId,
-          tags: values.tags || [],
-          category: values.category || '综合',
-        },
+
+      const article = buildArticlePayload({
+        title: values.title,
+        username: userRef.current.username,
+        userId: userRef.current.userId,
+        tags: values.tags || [],
+        category: values.category || '综合',
         content: value,
         description: values.description || '未填写描述',
         published: true,
-      };
+      });
+
       if (currentArticleId) {
         await updateArticleApi(currentArticleId, article);
       } else {
         await createArticleApi(article);
       }
+
       message.success('文章发布成功');
       setTempImages([]);
       setIsPublishModalOpen(false);
@@ -274,26 +338,24 @@ const New = () => {
       setCategory('');
       setDescription('');
       navigate(`/user/${userRef.current.userId}`);
-    } catch (error: any) {
-      const errorCode = error.response?.data?.error?.code || 'UNKNOWN';
-      if (errorCode === 'MISSING_TOKEN' || errorCode === '401 Unauthorized') {
+    } catch (error: unknown) {
+      if (shouldOpenLogin(error)) {
         setIsLoginOpen(true);
       } else {
-        message.error(`发布失败：${error.message || '未知错误'}`);
+        message.error(`发布失败：${getApiErrorMessage(error, '未知错误')}`);
       }
     }
   };
 
-  // 加载草稿（若有 articleId）
   useEffect(() => {
     if (articleId) {
       setCurrentArticleId(articleId);
-      getArticleByIdApi(articleId)
+      void getArticleByIdApi(articleId)
         .then((res) => {
-          const { meta, content, description } = res;
+          const { meta, content, description: articleDescription } = res;
           setSearchValue(meta.title);
           setValue(content);
-          setDescription(description);
+          setDescription(articleDescription);
           setTags(meta.tags);
           setCategory(meta.category);
           setHasCreatedArticle(true);
@@ -302,94 +364,95 @@ const New = () => {
         .catch(() => {
           message.error('加载草稿失败');
         });
-    } else {
-      setHasCreatedArticle(false);
-      setCurrentArticleId(undefined);
-      setSaveStatus('idle');
+      return;
     }
+
+    setHasCreatedArticle(false);
+    setCurrentArticleId(undefined);
+    setSaveStatus('idle');
   }, [articleId]);
 
-  // 保存草稿
-  const saveDraft = useCallback(async (data: CreateArticleRequest, articleId: string) => {
-    if (!articleId) {
+  const saveDraft = useCallback(async (data: CreateArticleRequest, targetArticleId: string) => {
+    if (!targetArticleId) {
       message.error('无法保存草稿：文章 ID 缺失');
       return;
     }
+
     setSaveStatus('saving');
+
     if (!userRef.current) {
       setSaveStatus('idle');
       message.error('请先登录');
       return;
     }
+
     try {
       const startTime = Date.now();
-      await updateArticleApi(articleId, {
+      await updateArticleApi(targetArticleId, {
         ...data,
         published: false,
       });
+
       const duration = Date.now() - startTime;
       if (duration < MIN_SAVING_DURATION) {
         await new Promise((resolve) => setTimeout(resolve, MIN_SAVING_DURATION - duration));
       }
+
       setSaveStatus('saved');
       message.success('草稿已更新');
       if (timeoutRef.current !== null) {
         clearTimeout(timeoutRef.current);
       }
+
       timeoutRef.current = setTimeout(() => {
         setSaveStatus('idle');
         timeoutRef.current = null;
       }, SAVE_STATUS_RESET_DELAY);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setSaveStatus('idle');
-      const errorCode = error.response?.data?.error?.code || 'UNKNOWN';
-      if (errorCode === 'MISSING_TOKEN' || errorCode === '401 Unauthorized') {
+      if (shouldOpenLogin(error)) {
         setIsLoginOpen(true);
       } else {
-        message.error(error.message || '保存草稿失败');
+        message.error(getApiErrorMessage(error, '保存草稿失败'));
       }
     }
-  }, [user]);
+  }, [setIsLoginOpen]);
 
-  // 防抖保存草稿
   const debouncedSaveDraft = useRef(
-    debounce((data: CreateArticleRequest, articleId: string) => {
-      saveDraft(data, articleId);
+    debounce((data: CreateArticleRequest, targetArticleId: string) => {
+      void saveDraft(data, targetArticleId);
     }, 1000)
   ).current;
 
-  // 监听标题和内容变化，触发保存
   useEffect(() => {
     if (userRef.current && currentArticleId && (searchValue.trim() || value.trim())) {
-      const article: CreateArticleRequest = {
-        meta: {
-          title: searchValue || '未命名草稿',
-          username: userRef.current.username,
-          userId: userRef.current.userId,
-          tags,
-          category: category || '综合',
-        },
+      const article = buildArticlePayload({
+        title: searchValue || '未命名草稿',
+        username: userRef.current.username,
+        userId: userRef.current.userId,
+        tags,
+        category: category || '综合',
         content: value,
         description: description || '未填写描述',
         published: false,
-      };
+      });
+
       debouncedSaveDraft(article, currentArticleId);
     }
   }, [searchValue, value, tags, category, description, currentArticleId, debouncedSaveDraft]);
 
-  // 清理临时图片（页面卸载）
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      cleanupAllTempImages();
+      void cleanupAllTempImages();
       event.preventDefault();
     };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [cleanupAllTempImages]);
 
-  // 清理定时器（组件卸载）
   useEffect(() => {
     return () => {
       if (timeoutRef.current !== null) {
@@ -398,16 +461,10 @@ const New = () => {
     };
   }, []);
 
-  // 登录状态
   useEffect(() => {
-    if (!user) {
-      setIsLoginOpen(true);
-    } else {
-      setIsLoginOpen(false);
-    }
-  }, [user]);
+    setIsLoginOpen(!user);
+  }, [user, setIsLoginOpen]);
 
-  // 保存状态显示
   const renderSaveStatus = () => {
     switch (saveStatus) {
       case 'saving':
@@ -463,7 +520,7 @@ const New = () => {
         footer={null}
         className={styles['publish-modal']}
       >
-        <Form
+        <Form<PublishFormValues>
           form={form}
           onFinish={handlePublishConfirm}
           layout="vertical"
@@ -483,10 +540,10 @@ const New = () => {
           >
             <Select placeholder="请选择类别">
               {categories
-                .filter((category) => category !== '综合')
-                .map((category) => (
-                  <Select.Option key={category} value={category}>
-                    {category}
+                .filter((itemCategory) => itemCategory !== '综合')
+                .map((itemCategory) => (
+                  <Select.Option key={itemCategory} value={itemCategory}>
+                    {itemCategory}
                   </Select.Option>
                 ))}
             </Select>

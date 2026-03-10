@@ -1,19 +1,29 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { PasswordLoginRequest, RegisterRequest } from '../../type/login';
+import { useNavigate } from 'react-router-dom';
 import { CloseOutlined } from '@ant-design/icons';
 import { Button, Form, Input, message } from 'antd';
+import { useAuth } from '../../context/useAuth';
+import { PasswordLoginRequest, RegisterRequest } from '../../type/login';
 import styles from './index.module.css';
 
-const LoginModal = ( {hasClose = true, toUrl = true}: {hasClose?: boolean, toUrl?: boolean} ) => {
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
+const LoginModal = ({ hasClose = true, toUrl = true }: { hasClose?: boolean; toUrl?: boolean }) => {
   const { isLoginOpen, setIsLoginOpen, login, register } = useAuth();
   const [form] = Form.useForm();
   const [error, setError] = useState('');
   const [actionType, setActionType] = useState<'login' | 'register'>('login');
+  const navigate = useNavigate();
 
   const handleSubmit = async (values: PasswordLoginRequest) => {
-    // console.log(values)
     setError('');
+
     try {
       if (actionType === 'login') {
         await login(values);
@@ -22,52 +32,57 @@ const LoginModal = ( {hasClose = true, toUrl = true}: {hasClose?: boolean, toUrl
         await register(values as RegisterRequest);
         message.success('注册成功');
       }
+
       form.resetFields();
-      if(toUrl) window.location.href = '/';
-    } catch (err: any) {
-      setError(err.message || `${actionType === 'login' ? '登录' : '注册'}失败`);
-      message.error(err.message || `${actionType === 'login' ? '登录' : '注册'}失败`);
+      if (toUrl) {
+        navigate('/');
+      }
+    } catch (err: unknown) {
+      const fallback = `${actionType === 'login' ? '登录' : '注册'}失败`;
+      const errorMessage = getErrorMessage(err, fallback);
+      setError(errorMessage);
+      message.error(errorMessage);
     }
   };
 
-    // 监听 ESC 键
   useEffect(() => {
-    if (!isLoginOpen) return; // 模态框关闭时不注册监听
+    if (!isLoginOpen) {
+      return;
+    }
 
-    const handleESCDown = (event: KeyboardEvent) => {
+    const handleEscDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        event.stopPropagation(); // 防止冒泡到 New.tsx
+        event.stopPropagation();
         setIsLoginOpen(false);
       }
     };
 
-    window.addEventListener('keydown', handleESCDown);
+    window.addEventListener('keydown', handleEscDown);
     return () => {
-      window.removeEventListener('keydown', handleESCDown);
+      window.removeEventListener('keydown', handleEscDown);
     };
   }, [isLoginOpen, setIsLoginOpen]);
 
-  if (!isLoginOpen) return null;
+  if (!isLoginOpen) {
+    return null;
+  }
 
   return (
     <div className={styles['login-overlay']}>
       <div className={styles['login-container']}>
         <div className={styles['login-head']}>
           <div className={styles['login-text']}>邮箱登录 / 注册</div>
-          {hasClose? (
-            <CloseOutlined
-              onClick={() => setIsLoginOpen(false)}
-              className={styles['close-icon']}
-            />
+          {hasClose ? (
+            <CloseOutlined onClick={() => setIsLoginOpen(false)} className={styles['close-icon']} />
           ) : null}
         </div>
         <div className={styles['login-body']}>
-          {error && <p className={styles['error-message']}>{error}</p>}
+          {error ? <p className={styles['error-message']}>{error}</p> : null}
           <Form
             form={form}
             onFinish={handleSubmit}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
                 setActionType('login');
                 form.submit();
               }
@@ -77,26 +92,20 @@ const LoginModal = ( {hasClose = true, toUrl = true}: {hasClose?: boolean, toUrl
           >
             <Form.Item
               name="email"
-              rules={[{ required: true, message: '请输入邮箱' }, { type: 'email', message: '邮箱格式不正确' }]}
+              rules={[
+                { required: true, message: '请输入邮箱' },
+                { type: 'email', message: '邮箱格式不正确' },
+              ]}
             >
-              <Input
-                placeholder="请输入邮箱"
-                className={styles['custom-input']}
-              />
+              <Input placeholder="请输入邮箱" className={styles['custom-input']} />
             </Form.Item>
-            <Form.Item
-              name="password"
-              rules={[{ required: true, message: '请输入密码' }]}
-            >
-              <Input.Password
-                placeholder="请输入密码"
-                className={styles['custom-input']}
-              />
+            <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
+              <Input.Password placeholder="请输入密码" className={styles['custom-input']} />
             </Form.Item>
             <Form.Item>
               <div className={styles['button-group']}>
                 <Button
-                  className={styles['submit-button']}
+                  className={`${styles['submit-button']} ${styles['secondary-button']}`}
                   onClick={() => {
                     setActionType('register');
                     form.submit();
@@ -106,7 +115,7 @@ const LoginModal = ( {hasClose = true, toUrl = true}: {hasClose?: boolean, toUrl
                 </Button>
                 <Button
                   type="primary"
-                  className={styles['submit-button']}
+                  className={`${styles['submit-button']} ${styles['primary-button']}`}
                   onClick={() => {
                     setActionType('login');
                     form.submit();

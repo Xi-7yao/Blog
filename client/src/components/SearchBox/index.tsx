@@ -1,11 +1,19 @@
 import { SearchOutlined } from '@ant-design/icons';
 import styles from './index.module.css';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const SearchBox = () => {
-    const [searchValue, setSearchValue] = useState('');
+interface SearchBoxProps {
+    initialValue?: string;
+}
+
+const SearchBox = ({ initialValue = '' }: SearchBoxProps) => {
+    const [searchValue, setSearchValue] = useState(initialValue);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        setSearchValue(initialValue);
+    }, [initialValue]);
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchValue(e.target.value);
@@ -25,6 +33,7 @@ const SearchBox = () => {
                 type="text" 
                 className={styles['searchInput']} 
                 placeholder="Type something..." 
+                id="searchInput"
                 value={searchValue}
                 onChange={handleSearchChange}
             />

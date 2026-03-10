@@ -3,7 +3,8 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { AppError, handleError, sendResponse } from '../utils/apiUtils';
-import { StringValue } from 'ms'
+import { StringValue } from 'ms';
+import { AuthRequest } from '../middleware/auth';
 
 // 环境变量
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -130,8 +131,6 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response): 
 
     // 验证明文密码
     validatePassword(password);
-    // console.log('Login request:', { email, passwordLength: password.length });
-
     const user = await User.findOne({ email }).select('username email password refreshTokens description role');
     if (!user) {
       throw new AppError('邮箱不存在', 404, 'USER_NOT_FOUND');
@@ -147,7 +146,6 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response): 
     await user.save();
 
     setTokenCookies(res, accessToken, refreshToken); 
-    console.log(user);
     sendResponse(res, {
       user: { userId: user._id, username: user.username, email: user.email, description: user.description, role: user.role },
     });
@@ -181,15 +179,12 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
 };
 
 // 获取用户信息
-export const getUser = async (req: Request, res: Response): Promise<void> => {
+export const getUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const token = req.cookies.accessToken;
-    if (!token) {
-      throw new AppError('未提供令牌', 401, 'MISSING_TOKEN');
+    if (!req.user?.userId) {
+      throw new AppError('未授权', 401, 'UNAUTHORIZED');
     }
-
-    const decoded = jwt.verify(token, JWT_SECRET!) as { userId: string; email: string };
-    const user = await User.findById(decoded.userId).select('username email description role').lean();
+    const user = await User.findById(req.user.userId).select('username email description role').lean();
     if (!user) {
       throw new AppError('用户不存在', 404, 'USER_NOT_FOUND');
     }
@@ -202,12 +197,11 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
 };
 
 // 登出
-export const logout = async (req: Request, res: Response): Promise<void> => {
+export const logout = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const refreshToken = req.cookies.refreshToken;
-    if (refreshToken) {
-      const decoded = jwt.verify(refreshToken, REFRESH_SECRET!) as { userId: string };
-      await User.updateOne({ _id: decoded.userId }, { $pull: { refreshTokens: refreshToken } });
+    if (refreshToken && req.user?.userId) {
+      await User.updateOne({ _id: req.user.userId }, { $pull: { refreshTokens: refreshToken } });
     }
 
     res.clearCookie('accessToken', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
@@ -219,19 +213,17 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
 };
 
 // 修改用户名
-export const updateUsername = async (req: Request<{}, {}, UpdateUsernameRequest>, res: Response): Promise<void> => {
+export const updateUsername = async (req: AuthRequest & Request<{}, {}, UpdateUsernameRequest>, res: Response): Promise<void> => {
   try {
     const { username } = req.body;
-    const token = req.cookies.accessToken;
-    if (!token) {
-      throw new AppError('未提供令牌', 401, 'MISSING_TOKEN');
-    }
     if (!username) {
       throw new AppError('用户名不能为空', 400, 'MISSING_USERNAME');
     }
+    if (!req.user?.userId) {
+      throw new AppError('未授权', 401, 'UNAUTHORIZED');
+    }
 
-    const decoded = jwt.verify(token, JWT_SECRET!) as { userId: string; email: string };
-    const user = await User.findById(decoded.userId);
+    const user = await User.findById(req.user.userId);
     if (!user) {
       throw new AppError('用户不存在', 404, 'USER_NOT_FOUND');
     }

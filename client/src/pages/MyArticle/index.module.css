@@ -1,199 +1,174 @@
-.archives-container {
-    padding: 35px 0;
-    display: flex;
-    flex-direction: column;
-    gap: 40px;
-  }
-  
-  .archives-article-group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .article-list {
-    width: 100%;
-    height: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 40px;
-  } 
+.archive-page {
+  padding: 36px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
 
-  .archives-articles-list {
-    display: flex;
+.archive-hero,
+.empty-panel,
+.year-group {
+  border-radius: 32px;
+  background: var(--panel-background);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(16px);
+}
+
+.archive-hero {
+  padding: 32px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.archive-hero h1,
+.empty-panel h1 {
+  margin: 10px 0 12px;
+  font-size: 3.2rem;
+  color: var(--card-text-color-main);
+}
+
+.archive-hero p,
+.empty-panel p,
+.year-header p {
+  font-size: 1.5rem;
+  line-height: 1.8;
+  color: var(--card-text-color-secondary);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hero-stats span {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--card-text-color-secondary);
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.year-group {
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.year-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.year-header h2 {
+  font-size: 2.8rem;
+  color: var(--card-text-color-main);
+}
+
+.year-anchor {
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--card-text-color-secondary);
+  font-size: 1.35rem;
+  font-weight: 600;
+  transition: background-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
+}
+
+.year-anchor:hover {
+  transform: translateY(-1px);
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary);
+}
+
+.article-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.empty-panel {
+  padding: 40px 36px;
+  text-align: left;
+}
+
+.primary-button {
+  margin-top: 24px;
+  padding: 14px 22px;
+  border: none;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-strong));
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 18px 30px rgba(47, 111, 237, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.primary-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 24px 36px rgba(47, 111, 237, 0.28);
+}
+
+.primary-button:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .archive-page {
+    padding: 28px 0;
+  }
+
+  .archive-hero,
+  .empty-panel,
+  .year-group {
+    border-radius: 24px;
+  }
+
+  .archive-hero,
+  .year-header {
     flex-direction: column;
-    background-color: var(--card-background-color);
-    border-radius: 10px;
-    box-shadow: 0 0 2px 0 rgba(0, 0, 0, 0.1);
+    align-items: flex-start;
   }
-  
-  .archives-article-item {
-    padding: 25px;
-    display: flex;
+
+  .archive-hero,
+  .empty-panel {
+    padding: 24px 20px;
   }
-  
-  .archives-article-item:not(:last-child) {
-    border-bottom: 1.5px solid var(--card-separator-color);
-  }
-  
-  .archives-article-item-title {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .archives-article-item-title h2 {
-    font-size: 1.8rem;
-    color: var(--card-text-color-main);
-  }
-  
-  .archives-article-item footer {
-    font-size: 1.4rem;
-    color: var(--card-text-color-tertiary);
-  }
-  
-  .no-articles {
-    text-align: center;
-    padding: 40px;
-    background-color: var(--card-background-color);
-    border-radius: 10px;
-    box-shadow: 0 0 2px 0 rgba(0, 0, 0, 0.1);
-  }
-  
-  .no-articles-title {
-    font-size: 2rem;
-    color: var(--body-text-color);
-    margin-bottom: 10px;
-  }
-  
-  .no-articles-description {
-    font-size: 1.4rem;
-    color: #666;
-    margin-bottom: 20px;
-  }
-  
-  .create-article-button {
-    padding: 10px 20px;
-    background-color: #1e80ff;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    font-size: 1.4rem;
-    cursor: pointer;
-  }
-  
-  .create-article-button:hover {
-    background-color: #1565c0;
-  }
-  
-  .no-auth {
-    text-align: center;
-    padding: 40px;
-    background-color: var(--card-background-color);
-    border-radius: 10px;
-    box-shadow: 0 0 2px 0 rgba(0, 0, 0, 0.1);
-  }
-  
-  .no-auth-title {
-    font-size: 2rem;
-    color: var(--body-text-color);
-    margin-bottom: 10px;
-  }
-  
-  .no-auth-description {
-    font-size: 1.4rem;
-    color: #666;
-    margin-bottom: 20px;
-  }
-  
-  .login-button {
-    padding: 10px 20px;
-    background-color: #1e80ff;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    font-size: 1.4rem;
-    cursor: pointer;
-  }
-  
-  .login-button:hover {
-    background-color: #1565c0;
-  }
-  
-  .login-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-  
-  .login-modal-content {
-    background-color: #fff;
+
+  .year-group {
     padding: 20px;
-    border-radius: 10px;
-    text-align: center;
-    max-width: 400px;
-    width: 90%;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
   }
-  
-  .login-modal-content h2 {
-    font-size: 1.8rem;
-    margin-bottom: 10px;
+
+  .archive-hero h1,
+  .empty-panel h1 {
+    font-size: 2.6rem;
   }
-  
-  .login-modal-content p {
-    font-size: 1.4rem;
-    color: #666;
-    margin-bottom: 20px;
-  }
-  
-  .modal-login-button,
-  .modal-close-button {
-    padding: 10px 20px;
-    margin: 0 10px;
-    border: none;
-    border-radius: 4px;
-    font-size: 1.4rem;
-    cursor: pointer;
-  }
-  
-  .modal-login-button {
-    background-color: #1e80ff;
-    color: #fff;
-  }
-  
-  .modal-login-button:hover {
-    background-color: #1565c0;
-  }
-  
-  .modal-close-button {
-    background-color: #ccc;
-    color: #333;
-  }
-  
-  .modal-close-button:hover {
-    background-color: #bbb;
-  }
-  
-  .loading {
-    text-align: center;
-    padding: 40px;
-    font-size: 1.6rem;
-    color: #666;
-  }
-  
-  .login-input {
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1.4rem;
-  }
+}

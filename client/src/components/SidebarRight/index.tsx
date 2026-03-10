@@ -1,68 +1,71 @@
 import styles from './index.module.css';
-// import SearchBox from '../SearchBox';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../../redux/store';
 import { setSelectedCategory } from '../../redux/slices/articlesSlice';
 import { useNavigate } from 'react-router-dom';
+import { AppstoreOutlined } from '@ant-design/icons';
 
 const SidebarRight = () => {
-  const categories = useSelector((state: RootState) => state.articles.categories); // string[]
+  const categories = useSelector((state: RootState) => state.articles.categories);
   const selectedCategory = useSelector((state: RootState) => state.articles.selectedCategory);
   const articles = useSelector((state: RootState) => state.articles.articles);
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const publishedArticles = Object.values(articles).filter((article) => article.published);
 
-  // 计算每个分类的文章数量
   const categoryCounts = categories.reduce((acc, category) => {
     acc[category] =
       category === '综合'
-        ? Object.values(articles).length
-        : Object.values(articles).filter((article) => article.meta.category === category).length;
+        ? publishedArticles.length
+        : publishedArticles.filter((article) => article.meta.category === category).length;
     return acc;
-  }, {} as { [key: string]: number });
+  }, {} as Record<string, number>);
 
-  // 处理分类点击
   const handleCategoryClick = (category: string) => {
     dispatch(setSelectedCategory(category));
     navigate(category === '综合' ? '/' : `/category/${category}`);
   };
 
   return (
-    <div className={styles['sideBar-right']}>
-      {/* <SearchBox /> */}
+    <aside className={styles['sideBar-right']}>
       <section className={styles['categoryContainer']}>
-        <span className={styles['categoryIcon']}>∞</span>
-        <h2 className={styles['categoryTitle']}>分类</h2>
+        <div className={styles['categoryHeader']}>
+          <span className={styles['categoryIcon']}>
+            <AppstoreOutlined />
+          </span>
+          <div>
+            <h2 className={styles['categoryTitle']}>分类</h2>
+            <p className={styles['categorySubtitle']}>按主题快速浏览内容</p>
+          </div>
+        </div>
+
         <div className={styles['categoryList']}>
           {categories.map((category) => (
-            <div
-              key={category}
-              className={`${styles['categoryItem']}`}
-            >
-              <a
-                href={category === '综合' ? '/' : `/category/${category}`}
-                className={`${selectedCategory === category? styles['categoryItem-link-active'] : styles['categoryItem-link']}`}
-                onClick={(e) => {
-                  e.preventDefault(); // 阻止默认跳转
-                  handleCategoryClick(category);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
+            <div key={category} className={styles['categoryItem']}>
+              <button
+                type="button"
+                className={
+                  selectedCategory === category
+                    ? styles['categoryItem-link-active']
+                    : styles['categoryItem-link']
+                }
+                onClick={() => handleCategoryClick(category)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
                     handleCategoryClick(category);
                   }
                 }}
-                tabIndex={0}
                 aria-current={selectedCategory === category ? 'true' : undefined}
               >
-                <span className={styles['category']}>{category}</span>
-                <span className={styles['count']}>{categoryCounts[category]}</span>
-              </a>
+                <span className={styles['categoryName']}>{category}</span>
+                <span className={styles['countBadge']}>{categoryCounts[category]}</span>
+              </button>
             </div>
           ))}
         </div>
       </section>
-    </div>
+    </aside>
   );
 };
 

@@ -1,84 +1,90 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { User } from '../type/user'
-import { PasswordLoginRequest, RegisterRequest } from "../type/login";
-import { passwordLoginApi, getUserApi, logoutApi } from '../api/userApi'
-import { registerApi } from '../api/userApi'
+import { useEffect, useState, ReactNode } from 'react';
+import { getUserApi, logoutApi, passwordLoginApi, registerApi } from '../api/userApi';
+import { PasswordLoginRequest, RegisterRequest } from '../type/login';
+import { User } from '../type/user';
+import { AuthContext } from './auth-context';
 
-interface AuthContextType {
-    user: User | null;
-    isLoginOpen: boolean;
-    setUser: (user: User | null) => void;
-    setIsLoginOpen: (open: boolean) => void;
-    login: ({email, password}: PasswordLoginRequest) => Promise<void>;
-    logout: () => Promise<void>;
-    checkLoginStatus: () => Promise<void>;
-    register: (userRegister: RegisterRequest) => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const AuthProvider = ({children}: {children: ReactNode}) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [isLoginOpen, setIsLoginOpen] = useState<boolean>(false);
-
-    const register = async (userRegister: RegisterRequest) => {
-        try {
-            const response = await registerApi(userRegister);
-            setUser(response.user);
-        } catch (error: any) {
-            throw new Error(error.response?.message || '注册失败');
-        }
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof (error as { response?: unknown }).response === 'object'
+  ) {
+    const response = (error as { response?: { data?: { error?: { message?: string } } } }).response;
+    const message = response?.data?.error?.message;
+    if (message) {
+      return message;
     }
+  }
 
-    const login = async ({email, password}: PasswordLoginRequest) => {
-        try {
-            const response = await passwordLoginApi({email, password});
-            // console.log(response)
-            setUser(response.user);
-            setIsLoginOpen(false);
-        } catch (error: any) {
-            throw new Error(error.response?.message || '登录失败');
-        }
-    };
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
 
-    const logout = async (): Promise<void> => {
-        try {
-            await logoutApi();
-            setUser(null);
-            setIsLoginOpen(false);
-        } catch (error: any) {
-            throw new Error(error.response?.message || '退出失败');
-        }
+  return fallback;
+};
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+
+  const register = async (payload: RegisterRequest) => {
+    try {
+      const response = await registerApi(payload);
+      setUser(response.user);
+    } catch (error: unknown) {
+      throw new Error(getErrorMessage(error, '注册失败'));
     }
+  };
 
-    const checkLoginStatus = async () => {
-        try {
-            const response = await getUserApi();
-            setUser(response);
-        } catch(error: any) {
-            setUser(null);
-        }
-    };
-
-    useEffect(() => {
-        checkLoginStatus();
-    }, [])
-
-    return (
-        <AuthContext.Provider 
-            value={{ 
-                user, isLoginOpen, setUser, setIsLoginOpen, register, login, logout, checkLoginStatus 
-            }
-        }>
-            {children}
-        </AuthContext.Provider>
-    )
-}
-
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-      throw new Error('useAuth must be used within AuthProvider');
+  const login = async (payload: PasswordLoginRequest) => {
+    try {
+      const response = await passwordLoginApi(payload);
+      setUser(response.user);
+      setIsLoginOpen(false);
+    } catch (error: unknown) {
+      throw new Error(getErrorMessage(error, '登录失败'));
     }
-    return context;
+  };
+
+  const logout = async () => {
+    try {
+      await logoutApi();
+      setUser(null);
+      setIsLoginOpen(false);
+    } catch (error: unknown) {
+      throw new Error(getErrorMessage(error, '退出失败'));
+    }
+  };
+
+  const checkLoginStatus = async () => {
+    try {
+      const response = await getUserApi();
+      setUser(response);
+    } catch {
+      setUser(null);
+    }
+  };
+
+  useEffect(() => {
+    void checkLoginStatus();
+  }, []);
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoginOpen,
+        setUser,
+        setIsLoginOpen,
+        register,
+        login,
+        logout,
+        checkLoginStatus,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };

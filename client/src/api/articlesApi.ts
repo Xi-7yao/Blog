@@ -1,16 +1,16 @@
-import { AxiosError, AxiosResponse } from 'axios';
+import { AxiosError } from 'axios';
 import { message } from 'antd';
-import api, { CustomAxiosRequestConfig } from './axios';
+import { requestApi, CustomAxiosRequestConfig } from './axios';
 import {
   Article,
   CreateArticleRequest,
   PaginatedResponse,
   Image,
+  SearchArticlesResponse,
   updateArticleRequest,
 } from '../type/articles';
 import { ApiResponse, ErrorResponse } from '../type/api';
 
-// 请求参数类型
 interface GetArticlesParams {
   page?: number;
   limit?: number;
@@ -20,53 +20,73 @@ interface GetMyArticlesParams extends GetArticlesParams {
   published?: 'true' | 'false' | 'all';
 }
 
-// 默认请求配置
+interface SearchArticlesParams extends GetArticlesParams {
+  keyword: string;
+}
+
 const defaultConfig: CustomAxiosRequestConfig = {
   retry: 1,
   retryDelay: 1000,
 };
 
-// 通用请求函数
-const request = async <T, D = any>(
+const getRequestErrorMessage = (
+  error: AxiosError<ErrorResponse>,
+  fallback = '操作失败'
+) => {
+  if (error.response) {
+    return error.response.data.error?.message || fallback;
+  }
+
+  if (error.request) {
+    return '网络错误，请检查连接';
+  }
+
+  return fallback;
+};
+
+const request = async <T, D = unknown>(
   method: 'get' | 'post' | 'put' | 'delete',
   url: string,
   data?: D,
-  config: CustomAxiosRequestConfig<D> = defaultConfig
+  config?: CustomAxiosRequestConfig<D>
 ): Promise<T> => {
+  const mergedConfig: CustomAxiosRequestConfig<D> = {
+    retry: defaultConfig.retry,
+    retryDelay: defaultConfig.retryDelay,
+    ...config,
+  };
+
   try {
-    const response = await api.request<ApiResponse<T>, AxiosResponse<ApiResponse<T>>, D>({
+    const response = await requestApi<ApiResponse<T>, D>({
       method,
       url,
       data,
-      headers: config.headers,
-      signal: config.signal,
-      retry: config.retry,
-      retryDelay: config.retryDelay,
+      headers: mergedConfig.headers,
+      signal: mergedConfig.signal,
+      retry: mergedConfig.retry,
+      retryDelay: mergedConfig.retryDelay,
     });
+
     if (response.data.error) {
       throw new Error(response.data.error.message);
     }
+
     return response.data.data;
-  } catch (error) {
+  } catch (error: unknown) {
     const axiosError = error as AxiosError<ErrorResponse>;
+
     if (axiosError.code === 'ERR_CANCELED') {
       throw new Error('Request canceled by user');
     }
-    let errorMessage = '操作失败';
-    if (axiosError.response) {
-      errorMessage = axiosError.response.data.error?.message || errorMessage;
-    } else if (axiosError.request) {
-      errorMessage = '网络错误，请检查连接';
-    }
-    message.error(errorMessage);
-    throw axiosError; // 让 axios.ts 拦截器处理 401
+
+    message.error(getRequestErrorMessage(axiosError));
+    throw axiosError;
   }
 };
 
-// 获取所有文章
 export const getArticlesApi = async (
   params: GetArticlesParams = {},
-  options: CustomAxiosRequestConfig = defaultConfig
+  options?: CustomAxiosRequestConfig
 ): Promise<PaginatedResponse> => {
   const { page = 1, limit = 10 } = params;
   return request<PaginatedResponse>(
@@ -77,10 +97,9 @@ export const getArticlesApi = async (
   );
 };
 
-// 获取单篇文章
 export const getArticleByIdApi = async (
   articleId: string,
-  options: CustomAxiosRequestConfig = defaultConfig
+  options?: CustomAxiosRequestConfig
 ): Promise<Article> => {
   const response = await request<{ article: Article }>(
     'get',
@@ -91,11 +110,25 @@ export const getArticleByIdApi = async (
   return response.article;
 };
 
-// 获取我的文章
+export const searchArticlesApi = async (
+  params: SearchArticlesParams,
+  options?: CustomAxiosRequestConfig
+): Promise<SearchArticlesResponse> => {
+  const { keyword, page = 1, limit = 10 } = params;
+  const encodedKeyword = encodeURIComponent(keyword.trim());
+
+  return request<SearchArticlesResponse>(
+    'get',
+    `/articles/search?keyword=${encodedKeyword}&page=${page}&limit=${limit}`,
+    undefined,
+    options
+  );
+};
+
 export const getMyArticlesApi = async (
   userId: string,
   params: GetMyArticlesParams = {},
-  options: CustomAxiosRequestConfig = defaultConfig
+  options?: CustomAxiosRequestConfig
 ): Promise<PaginatedResponse> => {
   const { page = 1, limit = 10, published = 'all' } = params;
   return request<PaginatedResponse>(
@@ -106,11 +139,10 @@ export const getMyArticlesApi = async (
   );
 };
 
-//更新文章
 export const updateArticleApi = async (
   articleId: string,
   article: updateArticleRequest,
-  options: CustomAxiosRequestConfig = defaultConfig
+  options?: CustomAxiosRequestConfig<updateArticleRequest>
 ): Promise<void> => {
   await request<{ article: Article }, updateArticleRequest>(
     'put',
@@ -118,22 +150,25 @@ export const updateArticleApi = async (
     article,
     options
   );
-}
+};
 
-// 删除文章
 export const deleteArticleApi = async (
   id: string,
-  options: CustomAxiosRequestConfig = defaultConfig
-): Promise<{ articleId: string}> => {
-  const response = await request<{ articleId: string }>('delete', `/articles/${id}`, undefined, options);
+  options?: CustomAxiosRequestConfig
+): Promise<{ articleId: string }> => {
+  const response = await request<{ articleId: string }>(
+    'delete',
+    `/articles/${id}`,
+    undefined,
+    options
+  );
   message.success('文章删除成功');
   return response;
 };
 
-// 创建文章
 export const createArticleApi = async (
   article: CreateArticleRequest,
-  options: CustomAxiosRequestConfig = defaultConfig
+  options?: CustomAxiosRequestConfig<CreateArticleRequest>
 ): Promise<Article> => {
   const response = await request<{ article: Article }, CreateArticleRequest>(
     'post',
@@ -145,28 +180,27 @@ export const createArticleApi = async (
   return response.article;
 };
 
-// 上传图片
 export const uploadImagesApi = async (
   formData: FormData,
-  options: CustomAxiosRequestConfig = defaultConfig
+  options?: CustomAxiosRequestConfig<FormData>
 ): Promise<string> => {
-  const response = await request<{ url: string }>(
-    'post',
-    '/img/upload',
-    formData,
-    {
-      ...options,
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }
-  );
+  const response = await request<{ url: string }, FormData>('post', '/img/upload', formData, {
+    ...options,
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
   return response.url;
 };
 
-// 删除图片
 export const deleteImagesApi = async (
   images: Image[],
-  options: CustomAxiosRequestConfig = defaultConfig
+  options?: CustomAxiosRequestConfig<{ images: Image[] }>
 ): Promise<void> => {
-  await request<{ message: string }, { images: Image[] }>('delete', '/img/delete', { images }, options);
+  await request<{ message: string }, { images: Image[] }>(
+    'delete',
+    '/img/delete',
+    { images },
+    options
+  );
   message.success('图片删除成功');
 };

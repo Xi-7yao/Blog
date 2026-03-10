@@ -7,18 +7,30 @@
 }
 
 :root {
-  --body-background-color: #f5f5fa;
-  --accent-text-color: #34495e;
-  --body-text-color: #707070;
+  --body-background-color: #f4f3f8;
+  --accent-text-color: #27364b;
+  --body-text-color: #697589;
   --card-background-color: #ffffff;
-  --card-text-color-main: #000000;
-  --card-text-color-secondary: #747474;
-  --card-text-color-tertiary: #767676;
-  --scrollbar-thumb: hsl(0, 0%, 85%);
-  --card-separator-color: rgba(218, 218, 218, 0.5);
+  --card-text-color-main: #253043;
+  --card-text-color-secondary: #5d6b7f;
+  --card-text-color-tertiary: #7c8798;
+  --scrollbar-thumb: rgba(83, 98, 122, 0.25);
+  --card-separator-color: rgba(132, 146, 166, 0.16);
   --login-background-color: #ffffff;
   --login-underline: rgba(228, 230, 235, 0.5);
-  --juejin-font: #252933;
+  --panel-background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.68));
+  --panel-muted-background: rgba(255, 255, 255, 0.56);
+  --panel-border: rgba(255, 255, 255, 0.35);
+  --panel-shadow: 0 18px 40px rgba(25, 31, 48, 0.08);
+  --panel-hover-shadow: 0 24px 48px rgba(25, 31, 48, 0.12);
+  --surface-soft: rgba(25, 31, 48, 0.05);
+  --surface-strong: rgba(25, 31, 48, 0.08);
+  --brand-primary: #2f6fed;
+  --brand-primary-strong: #1c5de4;
+  --brand-primary-soft: rgba(47, 111, 237, 0.12);
+  --brand-primary-soft-strong: rgba(47, 111, 237, 0.22);
+  --hero-glow-left: rgba(58, 123, 213, 0.12);
+  --hero-glow-right: rgba(244, 114, 182, 0.1);
 }
 
 html {
@@ -26,21 +38,122 @@ html {
   line-height: 1.15;
   scroll-behavior: smooth;
 }
+
 body {
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--body-background-color);
+  color: var(--card-text-color-main);
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 [data-theme="dark"] {
-  --body-background-color: #303030;
-  --accent-text-color: #ecf0f1;
-  --body-text-color: rgba(255, 255, 255, 0.7);
-  --card-background-color: #424242;
-  --card-text-color-main: rgba(255, 255, 255, 0.9);
-  --card-text-color-secondary: rgba(255, 255, 255, 0.7);
-  --card-text-color-tertiary: rgba(255, 255, 255, 0.5);
+  --body-background-color: #0d1117;
+  --accent-text-color: #f4f7ff;
+  --body-text-color: rgba(196, 208, 228, 0.78);
+  --card-background-color: #1a2332;
+  --card-text-color-main: rgba(245, 248, 255, 0.96);
+  --card-text-color-secondary: rgba(216, 224, 238, 0.84);
+  --card-text-color-tertiary: rgba(175, 188, 210, 0.72);
+  --scrollbar-thumb: rgba(140, 160, 192, 0.28);
+  --card-separator-color: rgba(150, 168, 196, 0.14);
+  --login-background-color: #151e2d;
+  --login-underline: rgba(255, 255, 255, 0.08);
+  --panel-background: #1a2332;
+  --panel-muted-background: #1e2840;
+  --panel-border: rgba(140, 165, 200, 0.22);
+  --panel-shadow: 0 24px 56px rgba(0, 0, 0, 0.5);
+  --panel-hover-shadow: 0 28px 64px rgba(0, 0, 0, 0.6);
+  --surface-soft: rgba(132, 154, 190, 0.1);
+  --surface-strong: rgba(132, 154, 190, 0.15);
+  --brand-primary: #5b8cff;
+  --brand-primary-strong: #7aa2ff;
+  --brand-primary-soft: rgba(91, 140, 255, 0.16);
+  --brand-primary-soft-strong: rgba(91, 140, 255, 0.28);
+  --hero-glow-left: rgba(41, 84, 189, 0.15);
+  --hero-glow-right: rgba(87, 38, 122, 0.12);
 }
+
 a {
   text-decoration: none;
   color: var(--accent-text-color);
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--brand-primary);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark mode overrides for github-markdown-css */
+[data-theme="dark"] .markdown-body {
+  color-scheme: dark;
+  --bgColor-default: transparent;
+  --bgColor-muted: rgba(132, 154, 190, 0.08);
+  --bgColor-neutral-muted: rgba(132, 154, 190, 0.1);
+  --borderColor-default: rgba(140, 165, 200, 0.22);
+  --borderColor-muted: rgba(140, 165, 200, 0.15);
+  --fgColor-default: rgba(245, 248, 255, 0.96);
+  --fgColor-muted: rgba(216, 224, 238, 0.84);
+
+  color: rgba(245, 248, 255, 0.96);
+  background-color: transparent;
+}
+
+[data-theme="dark"] .markdown-body pre {
+  background-color: rgba(13, 17, 23, 0.6);
+}
+
+[data-theme="dark"] .markdown-body code {
+  background-color: rgba(132, 154, 190, 0.12);
+}
+
+[data-theme="dark"] .markdown-body pre code {
+  background-color: transparent;
+}
+
+[data-theme="dark"] .markdown-body blockquote {
+  border-left-color: rgba(140, 165, 200, 0.3);
+  color: rgba(175, 188, 210, 0.72);
+}
+
+[data-theme="dark"] .markdown-body hr {
+  background-color: rgba(140, 165, 200, 0.15);
+}
+
+[data-theme="dark"] .markdown-body table tr {
+  background-color: transparent;
+  border-top-color: rgba(140, 165, 200, 0.15);
+}
+
+[data-theme="dark"] .markdown-body table tr:nth-child(2n) {
+  background-color: rgba(132, 154, 190, 0.06);
+}
+
+[data-theme="dark"] .markdown-body table th,
+[data-theme="dark"] .markdown-body table td {
+  border-color: rgba(140, 165, 200, 0.18);
+}
+
+[data-theme="dark"] .markdown-body img {
+  background-color: transparent;
+}
+
+[data-theme="dark"] .markdown-body a {
+  color: #5b8cff;
+}
+
+[data-theme="dark"] .markdown-body .highlight pre,
+[data-theme="dark"] .markdown-body [data-lang] {
+  background-color: rgba(13, 17, 23, 0.6);
+}
+
+[data-theme="dark"] .bytemd {
+  background-color: transparent;
+  color: rgba(245, 248, 255, 0.96);
+  border-color: rgba(140, 165, 200, 0.22);
 }

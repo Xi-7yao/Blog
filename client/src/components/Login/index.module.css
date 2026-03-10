@@ -1,89 +1,133 @@
 .login-overlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 50;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 10, 20, 0.52);
+  backdrop-filter: blur(8px);
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-container {
+  border-radius: 24px;
+  box-shadow: 0 28px 60px rgba(14, 20, 32, 0.22);
+  background: var(--panel-background);
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  min-width: 460px;
+  z-index: 51;
+  overflow: hidden;
+}
+
+.login-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2rem 2.4rem 1.6rem;
+  border-bottom: 1px solid var(--login-underline);
+}
+
+.login-text {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--card-text-color-main);
+  line-height: 1.2;
+}
+
+.close-icon {
+  cursor: pointer;
+  font-size: 1.6rem;
+  color: var(--body-text-color);
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.close-icon:hover {
+  color: var(--card-text-color-main);
+  transform: scale(1.08);
+}
+
+.login-body {
+  padding: 2rem 2.4rem 2.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+
+.error-message {
+  color: #ff6b6b;
+  text-align: center;
+  font-size: 1.25rem;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.button-group {
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.submit-button {
+  height: 4.6rem;
+  font-size: 1.55rem;
+  flex: 1;
+  border-radius: 14px;
+  font-weight: 600;
+}
+
+.primary-button {
+  border: none !important;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-strong)) !important;
+  box-shadow:
+    0 14px 28px rgba(47, 111, 237, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.primary-button:hover {
+  transform: translateY(-1px);
+}
+
+.secondary-button {
+  background: var(--panel-muted-background) !important;
+  border: 1px solid var(--panel-border) !important;
+  color: var(--card-text-color-main) !important;
+}
+
+.secondary-button:hover {
+  border-color: var(--brand-primary-soft-strong) !important;
+  color: var(--brand-primary-strong) !important;
+}
+
+.custom-input {
+  height: 52px !important;
+  font-size: 16px !important;
+  padding: 12px !important;
+  color: var(--card-text-color-main) !important;
+  border-radius: 14px !important;
+  border: 1px solid var(--panel-border) !important;
+  background: var(--panel-muted-background) !important;
+  box-shadow: none !important;
+}
+
+.custom-input:hover,
+.custom-input:focus,
+.custom-input:focus-within {
+  border-color: var(--brand-primary) !important;
+}
+
+@media (max-width: 640px) {
   .login-container {
-    border-radius: 8px;
-    box-shadow: 0 0 2px 0 rgba(0, 0, 0, 0.1);
-    background-color: #fff;
-    display: flex;
-    flex-direction: column;
-    min-width: 450px;
-    z-index: 51;
+    min-width: 0;
+    width: calc(100vw - 32px);
   }
-  
-  .login-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.67rem 2.33rem;
-    border-bottom: 2px solid var(--login-underline);
-  }
-  
-  .login-text {
-    font-size: 1.67rem;
-    color: var(--login-font);
-    line-height: 2.33rem;
-  }
-  
-  .close-icon {
-    cursor: pointer;
-    font-size: 1.2rem;
-    color: var(--login-font);
-  }
-  
-  .close-icon:hover {
-    color: #333;
-  }
-  
-  .login-body {
-    padding: 1.67rem 2.33rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1.3rem;
-  }
-  
-  .login-title {
-    font-size: 1.8rem;
-    font-weight: bold;
-    text-align: center;
-    color: var(--login-font);
-  }
-  
-  .error-message {
-    color: #ff4d4f;
-    text-align: center;
-    font-size: 1rem;
-  }
-  
-  .login-form {
-    display: flex;
-    flex-direction: column;
-  }
-  
+
   .button-group {
-    display: flex;
-    gap: 16px;
-    justify-content: space-between;
+    flex-direction: column;
   }
-  
-  .submit-button {
-    height: 4rem;
-    font-size: 1.5rem;
-    flex: 1;
-  }
-  
-  /* 自定义输入框 */
-  .custom-input {
-    height: 48px !important;
-    font-size: 16px !important;
-    padding: 12px !important;
-    color: #595959 !important;
-    border-radius: 4px;
-  }
+}
