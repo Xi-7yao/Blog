@@ -23,6 +23,10 @@ interface SearchArticlesParams extends GetArticlesParams {
   keyword: string;
 }
 
+interface FilterArticlesParams extends GetArticlesParams {
+  category?: string;
+}
+
 export interface CategoryStatsResponse {
   total: number;
   counts: Record<string, number>;
@@ -35,6 +39,23 @@ export const getArticlesApi = async (
   const { page = 1, limit = 10 } = params;
 
   return request<PaginatedResponse>('get', `/articles?page=${page}&limit=${limit}`, undefined, options);
+};
+
+export const getFilteredArticlesApi = async (
+  params: FilterArticlesParams = {},
+  options?: CustomAxiosRequestConfig
+): Promise<PaginatedResponse> => {
+  const { page = 1, limit = 10, category } = params;
+  const query = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  if (category) {
+    query.set('category', category);
+  }
+
+  return request<PaginatedResponse>('get', `/articles/filter?${query.toString()}`, undefined, options);
 };
 
 export const getArticleByIdApi = async (

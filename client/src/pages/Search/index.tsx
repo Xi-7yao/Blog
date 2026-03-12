@@ -1,3 +1,4 @@
+import { Pagination } from 'antd';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Details from '../../components/Details';
@@ -8,12 +9,14 @@ import styles from './index.module.css';
 
 type SearchStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
 
+const PAGE_SIZE = 10;
+
 const getErrorMessage = (error: unknown) => {
   if (error instanceof Error) {
     return error.message;
   }
 
-  return 'Search failed. Please try again.';
+  return '搜索失败，请稍后再试。';
 };
 
 const Search = () => {
@@ -23,6 +26,11 @@ const Search = () => {
   const [results, setResults] = useState<SearchArticleResult[]>([]);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [keyword]);
 
   useEffect(() => {
     if (!keyword) {
@@ -41,7 +49,7 @@ const Search = () => {
 
       try {
         const response = await searchArticlesApi(
-          { keyword, page: 1, limit: 20 },
+          { keyword, page: currentPage, limit: PAGE_SIZE },
           { signal: controller.signal, retry: 0 }
         );
         setResults(response.results);
@@ -62,34 +70,34 @@ const Search = () => {
     void runSearch();
 
     return () => controller.abort();
-  }, [keyword]);
+  }, [currentPage, keyword]);
 
   return (
     <main className={styles['search-container']}>
       <section className={styles['search-hero']}>
-        <h1>Search Articles</h1>
-        <p>Search by title, tags, category, or content.</p>
+        <h1>搜索文章</h1>
+        <p>支持标题、标签、分类、正文片段和拼音关键词检索。</p>
         <SearchBox initialValue={keyword} />
       </section>
 
       {!keyword ? (
         <section className={styles['search-empty']}>
-          <h2>Start with a keyword</h2>
-          <p>Try a topic, tag, category, or even a pinyin keyword.</p>
+          <h2>输入一个关键词开始搜索</h2>
+          <p>可以试试主题、标签、分类，或者拼音关键词。</p>
         </section>
       ) : null}
 
       {keyword ? (
         <section className={styles['search-results']}>
           <header className={styles['search-summary']}>
-            <h2>Results for "{keyword}"</h2>
-            <span>{total} articles</span>
+            <h2>“{keyword}” 的搜索结果</h2>
+            <span>{total} 篇匹配文章</span>
           </header>
 
-          {status === 'loading' ? <div className={styles['search-state']}>Loading search results...</div> : null}
+          {status === 'loading' ? <div className={styles['search-state']}>正在加载搜索结果...</div> : null}
           {status === 'failed' ? <div className={styles['search-state']}>{error}</div> : null}
           {status === 'succeeded' && results.length === 0 ? (
-            <div className={styles['search-state']}>No matching articles were found.</div>
+            <div className={styles['search-state']}>没有找到匹配的文章。</div>
           ) : null}
 
           {results.map((result) => (
@@ -101,6 +109,18 @@ const Search = () => {
               />
             </div>
           ))}
+
+          {total > PAGE_SIZE ? (
+            <div className={styles['paginationContainer']}>
+              <Pagination
+                current={currentPage}
+                pageSize={PAGE_SIZE}
+                total={total}
+                showSizeChanger={false}
+                onChange={(page) => setCurrentPage(page)}
+              />
+            </div>
+          ) : null}
         </section>
       ) : null}
     </main>

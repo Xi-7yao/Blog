@@ -48,8 +48,6 @@ export const normalizeImageDeletePayload = (images: TempImage[]): Image[] =>
 
 export const buildArticlePayload = ({
   title,
-  username,
-  userId,
   tags,
   category,
   content,
@@ -57,8 +55,6 @@ export const buildArticlePayload = ({
   published,
 }: {
   title: string;
-  username: string;
-  userId: string;
   tags: string[];
   category: string;
   content: string;
@@ -66,14 +62,12 @@ export const buildArticlePayload = ({
   published: boolean;
 }): CreateArticleRequest => ({
   meta: {
-    title: title.trim() || '未命名文章',
-    username,
-    userId,
+    title: title.trim() || 'Untitled article',
     tags,
     category: category || CATEGORY_ALL,
   },
   content,
-  description: description.trim() || '作者还没有补充摘要',
+  description: description.trim() || 'No description provided yet.',
   published,
 });
 

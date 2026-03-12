@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import Article, { IArticle } from '../models/Article';
+import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { AppError, handleError, paginateQuery, sendResponse } from '../utils/apiUtils';
 import { fuzzySearch } from '../utils/fuzzySearch';
@@ -33,6 +34,19 @@ interface SearchArticleResponse {
   article: ArticleResponse;
   snippet: string;
   score: number;
+}
+
+interface ArticleMetaInput {
+  title: string;
+  tags: string[];
+  category: string;
+}
+
+interface ArticleRequestBody {
+  meta?: Partial<ArticleMetaInput>;
+  description?: string;
+  content?: string;
+  published?: boolean;
 }
 
 const ARTICLE_LIST_FIELDS = 'articleId meta description published stats';
@@ -97,20 +111,33 @@ const buildSnippet = (article: Pick<IArticle, 'content' | 'description'>, keywor
 };
 
 const sanitizeArticlePayload = (
-  meta: IArticle['meta'],
+  meta: ArticleMetaInput,
+  author: Pick<IArticle['meta'], 'userId' | 'username'>,
   description: string,
   content: string
 ) => ({
   meta: {
-    ...meta,
+    ...author,
     title: sanitizeArticleText(meta.title),
-    username: sanitizeArticleText(meta.username),
     category: sanitizeArticleText(meta.category || ''),
     tags: sanitizeArticleTags(meta.tags),
   },
   description: sanitizeArticleText(description),
   content: sanitizeArticleContent(content),
 });
+
+const getAuthorSnapshot = async (userId: string) => {
+  const author = await User.findById(userId).select('username').lean<{ username: string } | null>();
+
+  if (!author) {
+    throw new AppError('Author not found', 404, 'AUTHOR_NOT_FOUND');
+  }
+
+  return {
+    userId,
+    username: sanitizeArticleText(author.username),
+  };
+};
 
 export const getAllArticles = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -170,18 +197,24 @@ export const getArticleById = async (req: AuthRequest, res: Response): Promise<v
 
 export const createArticle = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { meta, content, description, published } = req.body;
+    const { meta, content, description, published } = req.body as ArticleRequestBody;
 
-    if (!meta?.userId) {
-      throw new AppError('Author ID is required', 400, 'MISSING_AUTHOR_ID');
+    if (!req.user) {
+      throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
     }
 
-    if (req.user && meta.userId !== req.user.userId) {
-      throw new AppError('Forbidden to create article for another user', 403, 'FORBIDDEN');
+    if (!meta?.title) {
+      throw new AppError('Article title is required', 400, 'MISSING_TITLE');
     }
 
+    const authorSnapshot = await getAuthorSnapshot(req.user.userId);
     const sanitizedPayload = sanitizeArticlePayload(
-      meta,
+      {
+        title: meta.title,
+        tags: meta.tags ?? [],
+        category: meta.category ?? '',
+      },
+      authorSnapshot,
       description || 'No description provided',
       content || ''
     );
@@ -208,7 +241,7 @@ export const createArticle = async (req: AuthRequest, res: Response): Promise<vo
 export const updateArticle = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { articleId } = req.params;
-    const { meta, content, description, published } = req.body;
+    const { meta, content, description, published } = req.body as ArticleRequestBody;
 
     if (!articleId) {
       throw new AppError('Article ID is required', 400, 'MISSING_ID');
@@ -231,20 +264,27 @@ export const updateArticle = async (req: AuthRequest, res: Response): Promise<vo
     const sanitizedData: Partial<IArticle> = {};
 
     if (meta) {
+      const authorSnapshot = await getAuthorSnapshot(article.meta.userId);
       const mergedMeta = {
-        ...article.meta,
+        title: article.meta.title,
+        tags: article.meta.tags,
+        category: article.meta.category,
         ...meta,
       };
 
       sanitizedData.meta = {
-        ...mergedMeta,
-        title: sanitizeArticleText(mergedMeta.title),
-        username: sanitizeArticleText(mergedMeta.username),
-        category: sanitizeArticleText(mergedMeta.category || ''),
-        tags: sanitizeArticleTags(mergedMeta.tags),
+        ...sanitizeArticlePayload(
+          {
+            title: mergedMeta.title,
+            tags: mergedMeta.tags ?? [],
+            category: mergedMeta.category ?? '',
+          },
+          authorSnapshot,
+          article.description,
+          article.content
+        ).meta,
         updatedAt: new Date(),
         createdAt: article.meta.createdAt,
-        userId: article.meta.userId,
       };
     }
 

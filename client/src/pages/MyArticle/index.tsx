@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { Pagination } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import Details from '../../components/Details';
 import LoginModal from '../../components/Login';
 import { useAuth } from '../../context/useAuth';
@@ -8,6 +9,8 @@ import { fetchMyArticles } from '../../redux/slices/articlesSlice';
 import type { AppDispatch, RootState } from '../../redux/store';
 import type { Article } from '../../type/articles';
 import styles from './index.module.css';
+
+const PAGE_SIZE = 10;
 
 const groupArticlesByYear = (articles: Article[]) => {
   const articleMap = articles.reduce<Record<string, Article[]>>((groups, article) => {
@@ -26,31 +29,40 @@ const MyArticle = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const location = useLocation();
-  const myArticles = useSelector((state: RootState) =>
-    user?.role === 'admin' ? state.articles.articles : state.articles.myArticles
-  );
+  const [currentPage, setCurrentPage] = useState(1);
+  const myArticles = useSelector((state: RootState) => state.articles.myArticles);
+  const publishedTotal = useSelector((state: RootState) => state.articles.myArticlesTotal);
   const status = useSelector((state: RootState) => state.articles.status);
 
   const ownerId = userId ?? user?.userId;
   const visibleArticles = useMemo(
     () =>
-      Object.values(myArticles)
-        .filter((article) => article.published)
-        .sort(
-          (left, right) =>
-            new Date(right.meta.updatedAt ?? right.meta.createdAt ?? '').getTime() -
-            new Date(left.meta.updatedAt ?? left.meta.createdAt ?? '').getTime()
-        ),
+      Object.values(myArticles).sort(
+        (left, right) =>
+          new Date(right.meta.updatedAt ?? right.meta.createdAt ?? '').getTime() -
+          new Date(left.meta.updatedAt ?? left.meta.createdAt ?? '').getTime()
+      ),
     [myArticles]
   );
   const groupedArticles = useMemo(() => groupArticlesByYear(visibleArticles), [visibleArticles]);
   const canManageArticles = Boolean(user && ownerId && (user.userId === ownerId || user.role === 'admin'));
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [ownerId]);
+
+  useEffect(() => {
     if (ownerId) {
-      void dispatch(fetchMyArticles(ownerId));
+      void dispatch(
+        fetchMyArticles({
+          userId: ownerId,
+          page: currentPage,
+          limit: PAGE_SIZE,
+          published: 'true',
+        })
+      );
     }
-  }, [dispatch, ownerId]);
+  }, [currentPage, dispatch, ownerId]);
 
   useEffect(() => {
     const hash = location.hash.replace('#', '');
@@ -71,7 +83,7 @@ const MyArticle = () => {
         <section className={styles['empty-panel']}>
           <span className={styles['eyebrow']}>文章归档</span>
           <h1>登录后查看你的文章时间线</h1>
-          <p>这里会展示按年份整理的已发布文章，适合回顾你的内容积累和项目成长轨迹。</p>
+          <p>这里会按年份整理已发布文章，更适合展示持续输出的内容积累。</p>
           <button className={styles['primary-button']} onClick={() => setIsLoginOpen(true)}>
             登录后继续
           </button>
@@ -99,7 +111,7 @@ const MyArticle = () => {
         <section className={styles['empty-panel']}>
           <span className={styles['eyebrow']}>文章归档</span>
           <h1>你还没有已发布的文章</h1>
-          <p>先写下一篇内容吧。发布后，这里会自动按年份整理，方便展示你的技术沉淀。</p>
+          <p>先写下一篇内容吧。发布后，这里会自动按年份整理，方便展示你的长期输出。</p>
           <button className={styles['primary-button']} onClick={() => navigate('/new')}>
             去写第一篇文章
           </button>
@@ -114,11 +126,11 @@ const MyArticle = () => {
         <div>
           <span className={styles['eyebrow']}>文章归档</span>
           <h1>{canManageArticles ? '你的文章时间线' : '作者文章时间线'}</h1>
-          <p>按年份查看已发布文章，更适合展示长期输出，而不是只看最近一篇。</p>
+          <p>按年份查看已发布文章，适合展示长期输出，而不是只看最近一篇。</p>
         </div>
         <div className={styles['hero-stats']}>
-          <span>{visibleArticles.length} 篇文章</span>
-          <span>{groupedArticles.length} 个年份分组</span>
+          <span>{publishedTotal} 篇文章</span>
+          <span>第 {currentPage} 页</span>
         </div>
       </section>
 
@@ -128,7 +140,7 @@ const MyArticle = () => {
             <header className={styles['year-header']}>
               <div>
                 <h2>{year}</h2>
-                <p>{articles.length} 篇已发布内容</p>
+                <p>{articles.length} 篇内容</p>
               </div>
               <a href={`#${year}`} className={styles['year-anchor']}>
                 回到 {year}
@@ -143,6 +155,18 @@ const MyArticle = () => {
           </section>
         ))}
       </section>
+
+      {publishedTotal > PAGE_SIZE ? (
+        <div className={styles['paginationContainer']}>
+          <Pagination
+            current={currentPage}
+            pageSize={PAGE_SIZE}
+            total={publishedTotal}
+            showSizeChanger={false}
+            onChange={(page) => setCurrentPage(page)}
+          />
+        </div>
+      ) : null}
     </main>
   );
 };

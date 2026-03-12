@@ -136,8 +136,6 @@ const New = () => {
         const startTime = Date.now();
         const article = buildArticlePayload({
           title: nextTitle,
-          username: userRef.current.username,
-          userId: userRef.current.userId,
           tags: draftMetaRef.current.tags,
           category: draftMetaRef.current.category,
           content: nextContent,
@@ -271,8 +269,6 @@ const New = () => {
     try {
       const article = buildArticlePayload({
         title: values.title,
-        username: userRef.current.username,
-        userId: userRef.current.userId,
         tags: values.tags || [],
         category: values.category || CATEGORY_ALL,
         content,
@@ -352,8 +348,6 @@ const New = () => {
 
     const article = buildArticlePayload({
       title,
-      username: userRef.current.username,
-      userId: userRef.current.userId,
       tags,
       category,
       content,

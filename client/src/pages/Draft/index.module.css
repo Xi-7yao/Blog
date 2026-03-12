@@ -56,6 +56,20 @@
   color: var(--card-text-color-secondary);
 }
 
+.paginationContainer {
+  display: flex;
+  justify-content: center;
+}
+
+.paginationContainer :global(.ant-pagination) {
+  padding: 12px 16px;
+  border-radius: 999px;
+  background: var(--panel-background);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(16px);
+}
+
 @media (max-width: 768px) {
   .draft-container {
     padding: 28px 0;

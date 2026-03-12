@@ -8,7 +8,7 @@ export interface AuthRequest extends Request {
 
 const decodeAccessToken = (token: string) => {
   if (!process.env.JWT_SECRET) {
-    throw new AppError('服务器配置错误', 500, 'CONFIG_ERROR');
+    throw new AppError('Server JWT configuration is missing.', 500, 'CONFIG_ERROR');
   }
 
   return jwt.verify(token, process.env.JWT_SECRET) as {
@@ -18,22 +18,32 @@ const decodeAccessToken = (token: string) => {
   };
 };
 
-export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
+const isTokenExpiredError = (error: unknown): error is Error => {
+  return error instanceof Error && error.name === 'TokenExpiredError';
+};
+
+export const authMiddleware = (req: AuthRequest, _res: Response, next: NextFunction) => {
   const token = req.cookies?.accessToken;
+
   if (!token) {
-    throw new AppError('未授权', 401, 'UNAUTHORIZED');
+    throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
   }
 
   try {
     req.user = decodeAccessToken(token);
     next();
   } catch (error) {
-    throw new AppError('无效的 token', 401, 'INVALID_TOKEN');
+    if (error instanceof AppError || isTokenExpiredError(error)) {
+      throw error;
+    }
+
+    throw new AppError('Invalid token', 401, 'INVALID_TOKEN');
   }
 };
 
-export const optionalAuthMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const optionalAuthMiddleware = (req: AuthRequest, _res: Response, next: NextFunction) => {
   const token = req.cookies?.accessToken;
+
   if (!token) {
     next();
     return;

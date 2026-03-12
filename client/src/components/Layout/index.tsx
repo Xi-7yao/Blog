@@ -1,22 +1,14 @@
 import { Outlet } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
 import SidebarLeft from '../SidebarLeft';
 import LoginModal from '../Login';
 import MobileNav from '../MobileNav';
 import { useTheme } from '../../context/useTheme';
-import { fetchArticles } from '../../redux/slices/articlesSlice';
-import type { AppDispatch } from '../../redux/store';
 import styles from './index.module.css';
 
 const Layout = () => {
   const { theme } = useTheme();
   const [showSidebar, setShowSidebar] = useState(window.innerWidth > 768);
-  const dispatch = useDispatch<AppDispatch>();
-
-  useEffect(() => {
-    void dispatch(fetchArticles({}));
-  }, [dispatch]);
 
   useEffect(() => {
     const handleResize = () => {

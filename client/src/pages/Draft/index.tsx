@@ -1,4 +1,5 @@
-import { useEffect, useMemo } from 'react';
+import { Pagination } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import Details from '../../components/Details';
@@ -7,28 +8,39 @@ import { fetchMyArticles } from '../../redux/slices/articlesSlice';
 import type { AppDispatch, RootState } from '../../redux/store';
 import styles from './index.module.css';
 
+const PAGE_SIZE = 10;
+
 const Draft = () => {
   const { userId } = useParams();
   const { user } = useAuth();
   const dispatch = useDispatch<AppDispatch>();
-  const myArticles = useSelector((state: RootState) =>
-    user?.role === 'admin' ? state.articles.articles : state.articles.myArticles
-  );
+  const [currentPage, setCurrentPage] = useState(1);
+  const myArticles = useSelector((state: RootState) => state.articles.myArticles);
+  const draftsTotal = useSelector((state: RootState) => state.articles.myArticlesTotal);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [userId]);
 
   useEffect(() => {
     if (userId) {
-      void dispatch(fetchMyArticles(userId));
+      void dispatch(
+        fetchMyArticles({
+          userId,
+          page: currentPage,
+          limit: PAGE_SIZE,
+          published: 'false',
+        })
+      );
     }
-  }, [dispatch, userId]);
+  }, [currentPage, dispatch, userId]);
 
   const draftArticles = useMemo(
     () =>
-      Object.values(myArticles)
-        .filter((article) => !article.published)
-        .sort(
-          (left, right) =>
-            new Date(right.meta.updatedAt ?? '').getTime() - new Date(left.meta.updatedAt ?? '').getTime()
-        ),
+      Object.values(myArticles).sort(
+        (left, right) =>
+          new Date(right.meta.updatedAt ?? '').getTime() - new Date(left.meta.updatedAt ?? '').getTime()
+      ),
     [myArticles]
   );
 
@@ -37,7 +49,7 @@ const Draft = () => {
       <div className={styles['draft-main']}>
         <Link to={`/user/${userId}/drafts`} className={styles['draft-header']}>
           <span className={styles['draft-text']}>草稿箱</span>
-          <span className={styles['draft-count']}>{draftArticles.length} 篇草稿</span>
+          <span className={styles['draft-count']}>{draftsTotal} 篇草稿</span>
         </Link>
 
         {draftArticles.length > 0 ? (
@@ -55,6 +67,18 @@ const Draft = () => {
             <p>开始写作后，自动保存的内容会出现在这里，方便继续编辑和整理。</p>
           </div>
         )}
+
+        {draftsTotal > PAGE_SIZE ? (
+          <div className={styles['paginationContainer']}>
+            <Pagination
+              current={currentPage}
+              pageSize={PAGE_SIZE}
+              total={draftsTotal}
+              showSizeChanger={false}
+              onChange={(page) => setCurrentPage(page)}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );

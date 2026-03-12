@@ -5,6 +5,7 @@ import {
   deleteArticleApi,
   getArticleByIdApi,
   getArticlesApi,
+  getFilteredArticlesApi,
   getMyArticlesApi,
 } from '../../api/articlesApi';
 
@@ -13,7 +14,9 @@ export const DEFAULT_CATEGORIES = [CATEGORY_ALL, '前端', '后端', '数据库'
 
 interface ArticlesState {
   articles: Record<string, Article>;
+  articlesTotal: number;
   myArticles: Record<string, Article>;
+  myArticlesTotal: number;
   selectedCategory: string;
   categories: string[];
   currentArticle: Article | null;
@@ -23,7 +26,9 @@ interface ArticlesState {
 
 const initialState: ArticlesState = {
   articles: {},
+  articlesTotal: 0,
   myArticles: {},
+  myArticlesTotal: 0,
   selectedCategory: CATEGORY_ALL,
   categories: DEFAULT_CATEGORIES,
   currentArticle: null,
@@ -33,8 +38,13 @@ const initialState: ArticlesState = {
 
 export const fetchArticles = createAsyncThunk(
   'articles/fetchArticles',
-  async (args: { page?: number; limit?: number } = {}) => {
-    const { page = 1, limit = 10 } = args;
+  async (args: { page?: number; limit?: number; category?: string } = {}) => {
+    const { page = 1, limit = 10, category } = args;
+
+    if (category && category !== CATEGORY_ALL) {
+      return getFilteredArticlesApi({ page, limit, category });
+    }
+
     return getArticlesApi({ page, limit });
   }
 );
@@ -43,9 +53,15 @@ export const fetchArticlesById = createAsyncThunk('articles/fetchArticlesById', 
   return getArticleByIdApi(articleId);
 });
 
-export const fetchMyArticles = createAsyncThunk('articles/fetchMyArticles', async (userId: string) => {
-  return getMyArticlesApi(userId);
-});
+export const fetchMyArticles = createAsyncThunk(
+  'articles/fetchMyArticles',
+  async (
+    args: { userId: string; page?: number; limit?: number; published?: 'true' | 'false' | 'all' }
+  ) => {
+    const { userId, page = 1, limit = 10, published = 'all' } = args;
+    return getMyArticlesApi(userId, { page, limit, published });
+  }
+);
 
 export const deleteArticle = createAsyncThunk('articles/deleteArticle', async (id: string) => {
   const response = await deleteArticleApi(id);
@@ -65,7 +81,9 @@ const articlesSlice = createSlice({
     },
     resetArticlesState(state) {
       state.articles = {};
+      state.articlesTotal = 0;
       state.myArticles = {};
+      state.myArticlesTotal = 0;
       state.selectedCategory = CATEGORY_ALL;
       state.currentArticle = null;
       state.status = 'idle';
@@ -80,6 +98,7 @@ const articlesSlice = createSlice({
       })
       .addCase(fetchArticles.fulfilled, (state, action) => {
         state.status = 'succeeded';
+        state.articlesTotal = action.payload.total;
         state.articles = action.payload.articles.reduce<Record<string, Article>>((acc, article) => {
           acc[article.articleId] = article;
           return acc;
@@ -108,6 +127,7 @@ const articlesSlice = createSlice({
       })
       .addCase(fetchMyArticles.fulfilled, (state, action) => {
         state.status = 'succeeded';
+        state.myArticlesTotal = action.payload.total;
         state.myArticles = action.payload.articles.reduce<Record<string, Article>>((acc, article) => {
           acc[article.articleId] = article;
           return acc;
@@ -123,6 +143,14 @@ const articlesSlice = createSlice({
       })
       .addCase(deleteArticle.fulfilled, (state, action) => {
         state.status = 'succeeded';
+        if (state.articles[action.payload]) {
+          state.articlesTotal = Math.max(0, state.articlesTotal - 1);
+        }
+
+        if (state.myArticles[action.payload]) {
+          state.myArticlesTotal = Math.max(0, state.myArticlesTotal - 1);
+        }
+
         delete state.articles[action.payload];
         delete state.myArticles[action.payload];
       })

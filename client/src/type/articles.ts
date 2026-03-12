@@ -8,6 +8,12 @@ export interface ArticleMeta {
   updatedAt?: string;
 }
 
+export interface ArticleMetaInput {
+  title: string;
+  tags: string[];
+  category: string;
+}
+
 export interface ArticleStats {
   views: number;
 }
@@ -22,7 +28,7 @@ export interface Article {
 }
 
 export interface CreateArticleRequest {
-  meta: ArticleMeta;
+  meta: ArticleMetaInput;
   description: string;
   content: string;
   published?: boolean;
