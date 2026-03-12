@@ -1,3 +1,7 @@
 node_modules/
 dist/
 .env
+.claude/
+client/*.log
+server/*.log
+server/tmp-smoke.png

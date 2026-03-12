@@ -5,14 +5,7 @@ import { Button, Form, Input, message } from 'antd';
 import { useAuth } from '../../context/useAuth';
 import { PasswordLoginRequest, RegisterRequest } from '../../type/login';
 import styles from './index.module.css';
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallback;
-};
+import { getErrorMessage } from '../../utils/getErrorMessage';
 
 const LoginModal = ({ hasClose = true, toUrl = true }: { hasClose?: boolean; toUrl?: boolean }) => {
   const { isLoginOpen, setIsLoginOpen, login, register } = useAuth();
@@ -21,12 +14,12 @@ const LoginModal = ({ hasClose = true, toUrl = true }: { hasClose?: boolean; toU
   const [actionType, setActionType] = useState<'login' | 'register'>('login');
   const navigate = useNavigate();
 
-  const handleSubmit = async (values: PasswordLoginRequest) => {
+  const handleSubmit = async (values: RegisterRequest | PasswordLoginRequest) => {
     setError('');
 
     try {
       if (actionType === 'login') {
-        await login(values);
+        await login(values as PasswordLoginRequest);
         message.success('登录成功');
       } else {
         await register(values as RegisterRequest);
@@ -37,9 +30,9 @@ const LoginModal = ({ hasClose = true, toUrl = true }: { hasClose?: boolean; toU
       if (toUrl) {
         navigate('/');
       }
-    } catch (err: unknown) {
-      const fallback = `${actionType === 'login' ? '登录' : '注册'}失败`;
-      const errorMessage = getErrorMessage(err, fallback);
+    } catch (requestError: unknown) {
+      const fallback = actionType === 'login' ? '登录失败' : '注册失败';
+      const errorMessage = getErrorMessage(requestError, fallback);
       setError(errorMessage);
       message.error(errorMessage);
     }

@@ -1,582 +1,523 @@
-import styles from './index.module.css';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AxiosError } from 'axios';
-import { createArticleApi, deleteImagesApi, getArticleByIdApi, updateArticleApi, uploadImagesApi } from '../../api/articlesApi';
-import { CreateArticleRequest, Image } from '../../type/articles';
-import { ErrorResponse } from '../../type/api';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../redux/store';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Drawer, Form, Input, Select, Spin, message } from 'antd';
 import { Editor } from '@bytemd/react';
 import gfm from '@bytemd/plugin-gfm';
+import zhHans from 'bytemd/locales/zh_Hans.json';
+import type { BytemdPlugin } from 'bytemd';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { getArticleByIdApi, updateArticleApi, uploadImagesApi, createArticleApi, deleteImagesApi } from '../../api/articlesApi';
+import LoginModal from '../../components/Login';
+import { useAuth } from '../../context/useAuth';
+import { CATEGORY_ALL } from '../../redux/slices/articlesSlice';
+import type { RootState } from '../../redux/store';
+import type { CreateArticleRequest } from '../../type/articles';
+import {
+  buildArticlePayload,
+  debounce,
+  getApiErrorMessage,
+  normalizeImageDeletePayload,
+  shouldOpenLogin,
+  TempImage,
+  PublishFormValues,
+  waitForMinimumDuration,
+} from './editorUtils';
+import { useSaveStatus } from './useSaveStatus';
+import styles from './index.module.css';
 import 'bytemd/dist/index.css';
 import 'github-markdown-css/github-markdown.css';
 import './MarkdownEditor.css';
-import { BytemdPlugin } from 'bytemd';
-import zhHans from 'bytemd/locales/zh_Hans.json';
-import { useAuth } from '../../context/useAuth';
-import LoginModal from '../../components/Login';
-import { Button, Form, Input, Modal, Select, message, Spin } from 'antd';
 
-interface TempImage {
-  id?: string;
-  url: string;
-  title?: string;
-  alt?: string;
-}
-
-interface PublishFormValues {
-  title: string;
-  category: string;
-  tags?: string[];
-  description?: string;
-}
-
-type SaveStatus = 'idle' | 'saving' | 'saved';
-
-const MIN_SAVING_DURATION = 700;
-const SAVE_STATUS_RESET_DELAY = 5000;
-
-const getApiErrorCode = (error: unknown) => {
-  const axiosError = error as AxiosError<ErrorResponse>;
-  return axiosError.response?.data?.error?.code || 'UNKNOWN';
-};
-
-const getApiErrorMessage = (error: unknown, fallback: string) => {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  const axiosError = error as AxiosError<ErrorResponse>;
-  return axiosError.response?.data?.error?.message || fallback;
-};
-
-const shouldOpenLogin = (error: unknown) => {
-  const errorCode = getApiErrorCode(error);
-  return errorCode === 'MISSING_TOKEN' || errorCode === 'TOKEN_EXPIRED' || errorCode === 'UNAUTHORIZED';
-};
-
-const normalizeImageDeletePayload = (images: TempImage[]): Image[] =>
-  images.map((image, index) => ({
-    id: image.id || `${index}`,
-    url: image.url.split('/').pop() as string,
-  }));
-
-const buildArticlePayload = ({
-  title,
-  username,
-  userId,
-  tags,
-  category,
-  content,
-  description,
-  published,
-}: {
-  title: string;
-  username: string;
-  userId: string;
-  tags: string[];
-  category: string;
-  content: string;
-  description: string;
-  published: boolean;
-}): CreateArticleRequest => ({
-  meta: {
-    title,
-    username,
-    userId,
-    tags,
-    category,
-  },
-  content,
-  description,
-  published,
-});
-
-const debounce = <Args extends unknown[]>(
-  func: (...args: Args) => void | Promise<void>,
-  wait: number
-) => {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-
-  return (...args: Args) => {
-    if (timeout !== null) {
-      clearTimeout(timeout);
-    }
-
-    timeout = setTimeout(() => {
-      void func(...args);
-      timeout = null;
-    }, wait);
-  };
-};
+const plugins: BytemdPlugin[] = [gfm()];
 
 const New = () => {
   const { articleId } = useParams();
-  const [description, setDescription] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [category, setCategory] = useState('');
-  const [searchValue, setSearchValue] = useState('');
-  const [value, setValue] = useState('');
-  const [tempImages, setTempImages] = useState<TempImage[]>([]);
-  const [deleteTempImages, setDeleteTempImages] = useState<TempImage[]>([]);
-  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
-  const [hasCreatedArticle, setHasCreatedArticle] = useState(!!articleId);
-  const [isCreatingDraft, setIsCreatingDraft] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
-  const [currentArticleId, setCurrentArticleId] = useState<string | undefined>(articleId);
-  const [form] = Form.useForm<PublishFormValues>();
   const navigate = useNavigate();
   const { user, isLoginOpen, setIsLoginOpen } = useAuth();
   const categories = useSelector((state: RootState) => state.articles.categories);
-  const plugins: BytemdPlugin[] = [gfm()];
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [form] = Form.useForm<PublishFormValues>();
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [category, setCategory] = useState(CATEGORY_ALL);
+  const [content, setContent] = useState('');
+  const [uploadedImages, setUploadedImages] = useState<TempImage[]>([]);
+  const [imagesPendingCleanup, setImagesPendingCleanup] = useState<TempImage[]>([]);
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [isCreatingDraft, setIsCreatingDraft] = useState(false);
+  const [isLoadingArticle, setIsLoadingArticle] = useState(Boolean(articleId));
+  const [currentArticleId, setCurrentArticleId] = useState<string | undefined>(articleId);
+  const [hasCreatedArticle, setHasCreatedArticle] = useState(Boolean(articleId));
+  const { saveStatus, markSaving, markSaved, resetSaveStatus } = useSaveStatus();
   const userRef = useRef(user);
+  const draftMetaRef = useRef({ description, tags, category });
+
+  const availableCategories = useMemo(
+    () => categories.filter((itemCategory) => itemCategory !== CATEGORY_ALL),
+    [categories]
+  );
 
   useEffect(() => {
     userRef.current = user;
   }, [user]);
 
-  const createDraft = async (title: string, content: string) => {
-    if (!userRef.current || isCreatingDraft) {
-      if (!userRef.current) {
-        setIsLoginOpen(true);
-      }
-      return;
-    }
+  useEffect(() => {
+    draftMetaRef.current = { description, tags, category };
+  }, [description, tags, category]);
 
-    setIsCreatingDraft(true);
-    setSaveStatus('saving');
+  const openLoginModal = useCallback(() => {
+    setIsLoginOpen(true);
+  }, [setIsLoginOpen]);
 
-    try {
-      const startTime = Date.now();
-      const article = buildArticlePayload({
-        title: title || '输入文章标题...',
-        username: userRef.current.username,
-        userId: userRef.current.userId,
-        tags,
-        category: category || '综合',
-        content: content || '',
-        description: description || '未填写描述',
-        published: false,
-      });
-
-      const res = await createArticleApi(article);
-      const newArticleId = res.articleId;
-      setHasCreatedArticle(true);
-      setCurrentArticleId(newArticleId);
-      navigate(`/edit/${newArticleId}`, { replace: true });
-
-      const duration = Date.now() - startTime;
-      if (duration < MIN_SAVING_DURATION) {
-        await new Promise((resolve) => setTimeout(resolve, MIN_SAVING_DURATION - duration));
+  const cleanupImages = useCallback(
+    async (images: TempImage[], warningMessage: string) => {
+      if (images.length === 0) {
+        return true;
       }
 
-      setSaveStatus('saved');
-      if (timeoutRef.current !== null) {
-        clearTimeout(timeoutRef.current);
+      try {
+        await deleteImagesApi(normalizeImageDeletePayload(images));
+        return true;
+      } catch (error: unknown) {
+        if (shouldOpenLogin(error)) {
+          openLoginModal();
+        } else {
+          message.warning(warningMessage);
+        }
+
+        return false;
+      }
+    },
+    [openLoginModal]
+  );
+
+  const saveDraft = useCallback(
+    async (article: CreateArticleRequest, targetArticleId: string) => {
+      if (!targetArticleId || !userRef.current) {
+        return;
       }
 
-      timeoutRef.current = setTimeout(() => {
-        setSaveStatus('idle');
-        timeoutRef.current = null;
-      }, SAVE_STATUS_RESET_DELAY);
+      markSaving();
 
-      await saveDraft(article, newArticleId);
-    } catch (error: unknown) {
-      if (shouldOpenLogin(error)) {
-        setIsLoginOpen(true);
-      } else {
-        message.error(`创建草稿失败：${getApiErrorMessage(error, '未知错误')}`);
+      try {
+        const startTime = Date.now();
+        await updateArticleApi(targetArticleId, { ...article, published: false });
+        await waitForMinimumDuration(startTime);
+        markSaved();
+      } catch (error: unknown) {
+        resetSaveStatus();
+
+        if (shouldOpenLogin(error)) {
+          openLoginModal();
+        } else {
+          message.error(getApiErrorMessage(error, '保存草稿失败'));
+        }
       }
-    } finally {
-      setIsCreatingDraft(false);
-    }
-  };
+    },
+    [markSaved, markSaving, openLoginModal, resetSaveStatus]
+  );
 
-  const debouncedCreateDraft = useRef(
-    debounce((title: string, content: string) => {
-      void createDraft(title, content);
+  const debouncedSaveDraft = useRef(
+    debounce((article: CreateArticleRequest, targetArticleId: string) => {
+      void saveDraft(article, targetArticleId);
     }, 1000)
   ).current;
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setSearchValue(newValue);
+  const createDraft = useCallback(
+    async (nextTitle: string, nextContent: string) => {
+      if (!userRef.current || isCreatingDraft) {
+        return;
+      }
+
+      setIsCreatingDraft(true);
+      markSaving();
+
+      try {
+        const startTime = Date.now();
+        const article = buildArticlePayload({
+          title: nextTitle,
+          username: userRef.current.username,
+          userId: userRef.current.userId,
+          tags: draftMetaRef.current.tags,
+          category: draftMetaRef.current.category,
+          content: nextContent,
+          description: draftMetaRef.current.description,
+          published: false,
+        });
+
+        const createdArticle = await createArticleApi(article);
+        const nextArticleId = createdArticle.articleId;
+
+        setHasCreatedArticle(true);
+        setCurrentArticleId(nextArticleId);
+        navigate(`/edit/${nextArticleId}`, { replace: true });
+
+        await waitForMinimumDuration(startTime);
+        markSaved();
+      } catch (error: unknown) {
+        resetSaveStatus();
+
+        if (shouldOpenLogin(error)) {
+          openLoginModal();
+        } else {
+          message.error(getApiErrorMessage(error, '创建草稿失败'));
+        }
+      } finally {
+        setIsCreatingDraft(false);
+      }
+    },
+    [isCreatingDraft, markSaved, markSaving, navigate, openLoginModal, resetSaveStatus]
+  );
+
+  const debouncedCreateDraft = useRef(
+    debounce((nextTitle: string, nextContent: string) => {
+      void createDraft(nextTitle, nextContent);
+    }, 1000)
+  ).current;
+
+  const handleTitleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextTitle = event.target.value;
+    setTitle(nextTitle);
 
     if (!userRef.current) {
-      setIsLoginOpen(true);
       return;
     }
 
-    if (!currentArticleId && !hasCreatedArticle && newValue.trim() && !isCreatingDraft) {
-      debouncedCreateDraft(newValue, value);
+    if (!currentArticleId && !hasCreatedArticle && nextTitle.trim() && !isCreatingDraft) {
+      debouncedCreateDraft(nextTitle, content);
     }
   };
 
-  const handleChange = (newValue: string) => {
-    setValue(newValue);
+  const handleEditorChange = (nextContent: string) => {
+    setContent(nextContent);
 
-    const imagesToDelete = tempImages
-      .filter((image) => !newValue.includes(image.url))
-      .map((image) => ({
-        ...image,
-        url: image.url.split('/').pop() as string,
-      }));
-
-    setDeleteTempImages(imagesToDelete);
+    const removedImages = uploadedImages.filter((image) => !nextContent.includes(image.url));
+    setImagesPendingCleanup(removedImages);
 
     if (!userRef.current) {
-      setIsLoginOpen(true);
       return;
     }
 
-    if (!currentArticleId && !hasCreatedArticle && newValue.trim() && !isCreatingDraft) {
-      debouncedCreateDraft(searchValue, newValue);
+    if (!currentArticleId && !hasCreatedArticle && nextContent.trim() && !isCreatingDraft) {
+      debouncedCreateDraft(title, nextContent);
     }
   };
 
   const handleUploadImages = async (files: File[]): Promise<TempImage[]> => {
+    if (!userRef.current) {
+      openLoginModal();
+      return [];
+    }
+
     const file = files[0];
     const formData = new FormData();
     formData.append('img', file);
 
     try {
       const url = await uploadImagesApi(formData);
-      const newImage: TempImage = { title: file.name, url, alt: undefined };
-      setTempImages((prev) => [...prev, newImage]);
-      return [newImage];
+      const nextImage: TempImage = { title: file.name, url };
+      setUploadedImages((prevImages) => [...prevImages, nextImage]);
+      return [nextImage];
     } catch (error: unknown) {
       if (shouldOpenLogin(error)) {
-        setIsLoginOpen(true);
+        openLoginModal();
       } else {
-        message.error('图片上传失败');
+        message.error(getApiErrorMessage(error, '图片上传失败'));
       }
 
       return [];
     }
   };
 
-  const cleanupAllTempImages = useCallback(async () => {
-    if (tempImages.length === 0) {
-      return;
-    }
-
-    try {
-      await deleteImagesApi(normalizeImageDeletePayload(tempImages));
-      setTempImages([]);
-    } catch {
-      message.warning('部分临时图片未能及时清理');
-    }
-  }, [tempImages]);
-
-  const cleanupUnusedImages = useCallback(async () => {
-    if (deleteTempImages.length === 0) {
-      return;
-    }
-
-    try {
-      await deleteImagesApi(normalizeImageDeletePayload(deleteTempImages));
-      setDeleteTempImages([]);
-    } catch {
-      message.warning('部分未使用图片清理失败');
-    }
-  }, [deleteTempImages]);
-
-  const handleDrafts = () => {
+  const handleOpenDrafts = () => {
     if (!userRef.current) {
-      setIsLoginOpen(true);
+      openLoginModal();
       return;
     }
 
     navigate(`/user/${userRef.current.userId}/drafts`);
   };
 
-  const handlePublish = () => {
+  const handleOpenPublishModal = () => {
     if (!userRef.current) {
-      setIsLoginOpen(true);
+      openLoginModal();
       return;
     }
 
-    form.setFieldsValue({ title: searchValue, description, tags, category });
+    form.setFieldsValue({
+      title,
+      description,
+      tags,
+      category: category || CATEGORY_ALL,
+    });
     setIsPublishModalOpen(true);
   };
 
   const handlePublishConfirm = async (values: PublishFormValues) => {
     if (!userRef.current) {
-      setIsLoginOpen(true);
+      openLoginModal();
       return;
     }
 
-    try {
-      await cleanupUnusedImages();
+    const cleanupSucceeded = await cleanupImages(
+      imagesPendingCleanup,
+      '部分未使用图片暂时没有清理成功'
+    );
 
+    if (cleanupSucceeded) {
+      setImagesPendingCleanup([]);
+    }
+
+    try {
       const article = buildArticlePayload({
         title: values.title,
         username: userRef.current.username,
         userId: userRef.current.userId,
         tags: values.tags || [],
-        category: values.category || '综合',
-        content: value,
-        description: values.description || '未填写描述',
+        category: values.category || CATEGORY_ALL,
+        content,
+        description: values.description || '',
         published: true,
       });
 
       if (currentArticleId) {
         await updateArticleApi(currentArticleId, article);
       } else {
-        await createArticleApi(article);
+        const createdArticle = await createArticleApi(article);
+        setCurrentArticleId(createdArticle.articleId);
       }
 
       message.success('文章发布成功');
-      setTempImages([]);
+      setUploadedImages([]);
+      setImagesPendingCleanup([]);
       setIsPublishModalOpen(false);
       form.resetFields();
-      setSearchValue('');
-      setValue('');
-      setTags([]);
-      setCategory('');
-      setDescription('');
+      resetSaveStatus();
+
       navigate(`/user/${userRef.current.userId}`);
     } catch (error: unknown) {
       if (shouldOpenLogin(error)) {
-        setIsLoginOpen(true);
+        openLoginModal();
       } else {
-        message.error(`发布失败：${getApiErrorMessage(error, '未知错误')}`);
+        message.error(getApiErrorMessage(error, '发布文章失败'));
       }
     }
   };
 
   useEffect(() => {
-    if (articleId) {
-      setCurrentArticleId(articleId);
-      void getArticleByIdApi(articleId)
-        .then((res) => {
-          const { meta, content, description: articleDescription } = res;
-          setSearchValue(meta.title);
-          setValue(content);
-          setDescription(articleDescription);
-          setTags(meta.tags);
-          setCategory(meta.category);
-          setHasCreatedArticle(true);
-          setSaveStatus('idle');
-        })
-        .catch(() => {
-          message.error('加载草稿失败');
-        });
+    if (!articleId) {
+      setTitle('');
+      setDescription('');
+      setTags([]);
+      setCategory(CATEGORY_ALL);
+      setContent('');
+      setUploadedImages([]);
+      setImagesPendingCleanup([]);
+      setCurrentArticleId(undefined);
+      setHasCreatedArticle(false);
+      setIsLoadingArticle(false);
+      resetSaveStatus();
       return;
     }
 
-    setHasCreatedArticle(false);
-    setCurrentArticleId(undefined);
-    setSaveStatus('idle');
-  }, [articleId]);
+    setIsLoadingArticle(true);
+    setCurrentArticleId(articleId);
 
-  const saveDraft = useCallback(async (data: CreateArticleRequest, targetArticleId: string) => {
-    if (!targetArticleId) {
-      message.error('无法保存草稿：文章 ID 缺失');
-      return;
-    }
-
-    setSaveStatus('saving');
-
-    if (!userRef.current) {
-      setSaveStatus('idle');
-      message.error('请先登录');
-      return;
-    }
-
-    try {
-      const startTime = Date.now();
-      await updateArticleApi(targetArticleId, {
-        ...data,
-        published: false,
+    void getArticleByIdApi(articleId)
+      .then((article) => {
+        setTitle(article.meta.title);
+        setContent(article.content);
+        setDescription(article.description);
+        setTags(article.meta.tags);
+        setCategory(article.meta.category || CATEGORY_ALL);
+        setHasCreatedArticle(true);
+      })
+      .catch((error: unknown) => {
+        if (shouldOpenLogin(error)) {
+          openLoginModal();
+        } else {
+          message.error(getApiErrorMessage(error, '加载文章失败'));
+        }
+      })
+      .finally(() => {
+        setIsLoadingArticle(false);
+        resetSaveStatus();
       });
-
-      const duration = Date.now() - startTime;
-      if (duration < MIN_SAVING_DURATION) {
-        await new Promise((resolve) => setTimeout(resolve, MIN_SAVING_DURATION - duration));
-      }
-
-      setSaveStatus('saved');
-      message.success('草稿已更新');
-      if (timeoutRef.current !== null) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      timeoutRef.current = setTimeout(() => {
-        setSaveStatus('idle');
-        timeoutRef.current = null;
-      }, SAVE_STATUS_RESET_DELAY);
-    } catch (error: unknown) {
-      setSaveStatus('idle');
-      if (shouldOpenLogin(error)) {
-        setIsLoginOpen(true);
-      } else {
-        message.error(getApiErrorMessage(error, '保存草稿失败'));
-      }
-    }
-  }, [setIsLoginOpen]);
-
-  const debouncedSaveDraft = useRef(
-    debounce((data: CreateArticleRequest, targetArticleId: string) => {
-      void saveDraft(data, targetArticleId);
-    }, 1000)
-  ).current;
+  }, [articleId, openLoginModal, resetSaveStatus]);
 
   useEffect(() => {
-    if (userRef.current && currentArticleId && (searchValue.trim() || value.trim())) {
-      const article = buildArticlePayload({
-        title: searchValue || '未命名草稿',
-        username: userRef.current.username,
-        userId: userRef.current.userId,
-        tags,
-        category: category || '综合',
-        content: value,
-        description: description || '未填写描述',
-        published: false,
-      });
-
-      debouncedSaveDraft(article, currentArticleId);
+    if (!userRef.current || !currentArticleId || (!title.trim() && !content.trim())) {
+      return;
     }
-  }, [searchValue, value, tags, category, description, currentArticleId, debouncedSaveDraft]);
+
+    const article = buildArticlePayload({
+      title,
+      username: userRef.current.username,
+      userId: userRef.current.userId,
+      tags,
+      category,
+      content,
+      description,
+      published: false,
+    });
+
+    debouncedSaveDraft(article, currentArticleId);
+  }, [category, content, currentArticleId, debouncedSaveDraft, description, tags, title]);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      void cleanupAllTempImages();
+      if (imagesPendingCleanup.length === 0) {
+        return;
+      }
+
+      void cleanupImages(imagesPendingCleanup, '部分临时图片未能及时清理');
       event.preventDefault();
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [cleanupAllTempImages]);
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current !== null) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    setIsLoginOpen(!user);
-  }, [user, setIsLoginOpen]);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [cleanupImages, imagesPendingCleanup]);
 
   const renderSaveStatus = () => {
     switch (saveStatus) {
       case 'saving':
         return (
           <span className={styles['save-status-saving']}>
-            <Spin size="small" style={{ marginRight: 4 }} />
-            保存中...
+            <Spin size="small" />
+            正在保存草稿
           </span>
         );
       case 'saved':
-        return <span className={styles['save-status-saved']}>保存成功</span>;
+        return <span className={styles['save-status-saved']}>草稿已自动保存</span>;
       case 'idle':
       default:
-        return <span className={styles['save-status-idle']}>文章自动保存到草稿箱</span>;
+        return user ? (
+          <span className={styles['save-status-idle']}>输入内容后会自动保存到草稿箱</span>
+        ) : (
+          <span className={styles['save-status-idle']}>登录后可自动保存草稿并上传图片</span>
+        );
     }
   };
 
   return (
     <div className={styles['new-container']}>
       <header className={styles['new-header']}>
-        <input
-          type="text"
-          placeholder="输入文章标题..."
-          className={styles['new-input']}
-          value={searchValue}
-          onChange={handleSearchChange}
-        />
+        <div className={styles['editor-meta']}>
+          <span className={styles['editor-eyebrow']}>{articleId ? '编辑文章' : '新建文章'}</span>
+          <input
+            type="text"
+            placeholder="输入文章标题..."
+            className={styles['new-input']}
+            value={title}
+            onChange={handleTitleChange}
+          />
+        </div>
+
         <div className={styles['new-button-container']}>
           {renderSaveStatus()}
-          <Button className={styles['new-button']} onClick={handleDrafts}>
+          <Button className={`${styles['new-button']} ${styles['secondary-button']}`} onClick={handleOpenDrafts}>
             草稿箱
           </Button>
-          <Button className={styles['new-button']} onClick={handlePublish}>
+          <Button className={`${styles['new-button']} ${styles['primary-button']}`} onClick={handleOpenPublishModal}>
             发布
           </Button>
         </div>
       </header>
+
       <main className={styles['new-main']}>
-        <Editor
-          value={value}
-          locale={zhHans}
-          plugins={plugins}
-          mode="split"
-          onChange={handleChange}
-          uploadImages={handleUploadImages}
-        />
+        {isLoadingArticle ? (
+          <div className={styles['editor-loading']}>
+            <Spin size="large" />
+            <span>正在加载文章内容...</span>
+          </div>
+        ) : (
+          <Editor
+            value={content}
+            locale={zhHans}
+            plugins={plugins}
+            mode="split"
+            onChange={handleEditorChange}
+            uploadImages={handleUploadImages}
+          />
+        )}
       </main>
-      {isLoginOpen && <LoginModal hasClose={false} toUrl={false} />}
-      <Modal
+
+      {isLoginOpen ? <LoginModal hasClose={!user} toUrl={false} /> : null}
+
+      <Drawer
         title="发布文章"
+        placement="right"
+        width={420}
         open={isPublishModalOpen}
-        onCancel={() => setIsPublishModalOpen(false)}
+        onClose={() => setIsPublishModalOpen(false)}
         footer={null}
-        className={styles['publish-modal']}
+        destroyOnClose
+        rootClassName={styles['publish-drawer']}
+        styles={{
+          content: { background: 'var(--panel-background)' },
+          header: {
+            background: 'transparent',
+            borderBottom: '1px solid var(--panel-border)',
+            padding: '20px 24px',
+          },
+          body: {
+            padding: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            flex: 1,
+            overflow: 'hidden',
+          },
+        }}
       >
-        <Form<PublishFormValues>
-          form={form}
-          onFinish={handlePublishConfirm}
-          layout="vertical"
-          className={styles['publish-form']}
-        >
-          <Form.Item
-            name="title"
-            label="文章标题"
-            rules={[{ required: true, message: '请输入文章标题' }]}
+        <div className={styles['drawer-body']}>
+          <Form<PublishFormValues>
+            form={form}
+            onFinish={handlePublishConfirm}
+            layout="vertical"
+            className={styles['publish-form']}
           >
-            <Input placeholder="请输入文章标题" />
-          </Form.Item>
-          <Form.Item
-            name="category"
-            label="文章类别"
-            rules={[{ required: true, message: '请选择文章类别' }]}
-          >
-            <Select placeholder="请选择类别">
-              {categories
-                .filter((itemCategory) => itemCategory !== '综合')
-                .map((itemCategory) => (
-                  <Select.Option key={itemCategory} value={itemCategory}>
-                    {itemCategory}
-                  </Select.Option>
-                ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="tags" label="标签">
-            <Select
-              mode="tags"
-              placeholder="输入标签，按回车添加"
-              tokenSeparators={[',']}
-            />
-          </Form.Item>
-          <Form.Item name="description" label="文章描述">
-            <Input.TextArea
-              placeholder="请输入文章描述（200字以内）"
-              maxLength={200}
-              showCount
-              rows={4}
-            />
-          </Form.Item>
-          <Form.Item>
-            <div className={styles['modal-button-group']}>
-              <Button onClick={() => setIsPublishModalOpen(false)}>取消</Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                style={{ backgroundColor: '#1d7dfa', borderColor: '#1d7dfa' }}
+            <div className={styles['form-section']}>
+              <div className={styles['form-section-title']}>基本信息</div>
+              <Form.Item name="title" label="文章标题" rules={[{ required: true, message: '请输入文章标题' }]}>
+                <Input placeholder="请输入文章标题" />
+              </Form.Item>
+              <Form.Item
+                name="category"
+                label="文章分类"
+                rules={[{ required: true, message: '请选择文章分类' }]}
               >
-                确定发布
-              </Button>
+                <Select placeholder="请选择分类" popupClassName={styles['select-dropdown']}>
+                  {availableCategories.map((itemCategory) => (
+                    <Select.Option key={itemCategory} value={itemCategory}>
+                      {itemCategory}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
             </div>
-          </Form.Item>
-        </Form>
-      </Modal>
+            <div className={styles['form-section']}>
+              <div className={styles['form-section-title']}>补充信息</div>
+              <Form.Item name="tags" label="标签">
+                <Select mode="tags" placeholder="输入标签后回车确认" tokenSeparators={[',']} popupClassName={styles['select-dropdown']} />
+              </Form.Item>
+              <Form.Item name="description" label="文章摘要">
+                <Input.TextArea
+                  placeholder="请输入文章摘要（200 字以内）"
+                  maxLength={200}
+                  showCount
+                  rows={4}
+                />
+              </Form.Item>
+            </div>
+          </Form>
+        </div>
+        <div className={styles['drawer-footer']}>
+          <Button onClick={() => setIsPublishModalOpen(false)}>取消</Button>
+          <Button type="primary" onClick={() => form.submit()} className={styles['publish-submit-button']}>
+            确认发布
+          </Button>
+        </div>
+      </Drawer>
     </div>
   );
 };

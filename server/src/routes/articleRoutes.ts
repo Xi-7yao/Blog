@@ -7,6 +7,7 @@ import {
   getArticleByUserId,
   getArticlesByTagsAndCategories,
   getCategories,
+  getCategoryStats,
   searchArticles,
   updateArticle,
 } from '../controllers/articleController';
@@ -17,6 +18,7 @@ const router = express.Router();
 router.route('/').get(getAllArticles).post(authMiddleware, createArticle);
 router.route('/filter').get(getArticlesByTagsAndCategories);
 router.route('/categories').get(getCategories);
+router.route('/categories/stats').get(getCategoryStats);
 router.route('/search').get(searchArticles);
 router.route('/byAuthor').get(authMiddleware, getArticleByUserId);
 

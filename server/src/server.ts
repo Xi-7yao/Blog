@@ -13,6 +13,7 @@ import userRoutes from './routes/userRoutes';
 import { AppError, handleError, sendResponse } from './utils/apiUtils';
 import { authMiddleware, AuthRequest } from './middleware/auth';
 import { uploadRateLimiter, writeRateLimiter } from './middleware/rateLimit';
+import ImageAsset from './models/ImageAsset';
 
 dotenv.config();
 
@@ -74,7 +75,7 @@ if (!fs.existsSync(imageDir)) {
 }
 
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(morgan('dev'));
 
@@ -93,6 +94,12 @@ app.post(
       }
 
       const url = `${process.env.HTTP_URL}/api/img/${req.file.filename}`;
+      await ImageAsset.create({
+        filename: req.file.filename,
+        url,
+        userId: req.user!.userId,
+      });
+
       sendResponse(res, { url });
     } catch (error) {
       handleError(res, error, req);
@@ -124,12 +131,22 @@ app.delete('/api/img/delete', authMiddleware, writeRateLimiter, async (req: Auth
       }
 
       const filePath = path.join(imageDir, filename);
+      const imageAsset = await ImageAsset.findOne({ filename }).lean();
+
+      if (!imageAsset) {
+        throw new AppError(`Image asset not found: ${filename}`, 404, 'IMAGE_ASSET_NOT_FOUND');
+      }
+
+      if (imageAsset.userId !== req.user!.userId && req.user!.role !== 'admin') {
+        throw new AppError('You do not have permission to delete this image.', 403, 'FORBIDDEN');
+      }
 
       if (!fs.existsSync(filePath)) {
         throw new AppError(`Image file not found: ${filename}`, 404, 'FILE_NOT_FOUND');
       }
 
       fs.unlinkSync(filePath);
+      await ImageAsset.deleteOne({ filename });
     }
 
     sendResponse(res, { message: 'Images deleted successfully.' });

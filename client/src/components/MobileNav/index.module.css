@@ -1,0 +1,56 @@
+.mobile-nav {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 10px;
+  height: 68px;
+  padding: 8px 10px;
+  border-radius: 22px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-background);
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(16px);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  z-index: 1000;
+}
+
+.nav-link,
+.nav-link-active {
+  border: none;
+  background: transparent;
+  color: var(--card-text-color-tertiary);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 1.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.nav-link span,
+.nav-link-active span {
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.nav-link:hover,
+.nav-link-active:hover {
+  transform: translateY(-1px);
+}
+
+.nav-link-active {
+  color: var(--brand-primary);
+  background: var(--brand-primary-soft);
+}
+
+@media (min-width: 768px) {
+  .mobile-nav {
+    display: none;
+  }
+}

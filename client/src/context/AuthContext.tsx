@@ -1,29 +1,9 @@
-import { useEffect, useState, ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { getUserApi, logoutApi, passwordLoginApi, registerApi } from '../api/userApi';
 import { PasswordLoginRequest, RegisterRequest } from '../type/login';
 import { User } from '../type/user';
 import { AuthContext } from './auth-context';
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'response' in error &&
-    typeof (error as { response?: unknown }).response === 'object'
-  ) {
-    const response = (error as { response?: { data?: { error?: { message?: string } } } }).response;
-    const message = response?.data?.error?.message;
-    if (message) {
-      return message;
-    }
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallback;
-};
+import { getErrorMessage } from '../utils/getErrorMessage';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);

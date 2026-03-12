@@ -28,7 +28,7 @@ export interface CreateArticleRequest {
   published?: boolean;
 }
 
-export type updateArticleRequest = CreateArticleRequest;
+export type UpdateArticleRequest = CreateArticleRequest;
 
 export interface PaginatedResponse {
   articles: Article[];
@@ -51,5 +51,3 @@ export interface Image {
   url: string;
   id: string;
 }
-
-export type currentArticle = Article;

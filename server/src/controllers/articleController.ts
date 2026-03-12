@@ -489,3 +489,32 @@ export const getCategories = async (req: Request, res: Response): Promise<void> 
     handleError(res, error, req);
   }
 };
+
+export const getCategoryStats = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const [stats, total] = await Promise.all([
+      Article.aggregate<{ _id: string; count: number }>([
+        { $match: { published: true } },
+        {
+          $group: {
+            _id: '$meta.category',
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+      Article.countDocuments({ published: true }),
+    ]);
+
+    const counts = stats.reduce<Record<string, number>>((acc, item) => {
+      if (item._id) {
+        acc[item._id] = item.count;
+      }
+
+      return acc;
+    }, {});
+
+    sendResponse(res, { counts, total });
+  } catch (error) {
+    handleError(res, error, req);
+  }
+};

@@ -1,35 +1,59 @@
 .more-menu {
-    position: relative;
-}
-.more-menu-button {
-    background-color: var(--card-background-color);
-    border: none;
-    cursor: pointer;
-    position: relative;
-    width: 50px;
-    height: 25px;
-}
-.antIcon {
-    font-size: 1.6rem;
-    background-color: var(--card-background-color);
-    color: var(--card-text-color-tertiary);
-}
-.more-menu-list {
-    width: 75px;
-    height: auto;
-    position: absolute;
-    top: 25px;
-    display: flex;
-    flex-direction: column;
-    border-radius: 5px;
-    background-color: var(--card-background-color);
-    box-shadow: 0 0 3px 0 rgba(0, 0, 0, 0.1);
-}
-.more-menu-item {
-    border: none;
-    cursor: pointer;
-    padding: 10px;
-    color: var(--card-text-color-secondary);
-    background-color: transparent;
+  position: relative;
 }
 
+.more-menu-button {
+  width: 44px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-muted-background);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.more-menu-button:hover {
+  transform: translateY(-1px);
+  background: var(--surface-soft);
+}
+
+.antIcon {
+  font-size: 1.8rem;
+  color: var(--card-text-color-tertiary);
+}
+
+.more-menu-list {
+  width: 96px;
+  position: absolute;
+  top: 42px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-background);
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(16px);
+  z-index: 20;
+}
+
+.more-menu-item {
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 1.35rem;
+  color: var(--card-text-color-secondary);
+  background-color: transparent;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.more-menu-item:hover {
+  background-color: var(--surface-soft);
+  color: var(--card-text-color-main);
+}

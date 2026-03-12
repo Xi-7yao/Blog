@@ -89,6 +89,7 @@ const SidebarLeft = () => {
           {user ? (
             <NavLink
               to={`/user/${user.userId}`}
+              end
               className={({ isActive }) => (isActive ? styles['menu-item-active'] : '')}
             >
               <ContainerOutlined className={styles['antIcon']} />

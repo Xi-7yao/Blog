@@ -1,3 +1,4 @@
+/* ── Base bytemd styles ── */
 .bytemd {
   color: var(--card-text-color-main);
   height: calc(100vh - 64px);
@@ -7,4 +8,103 @@
 }
 .bytemd-preview .markdown-body {
   margin: 24px 10px;
+}
+
+/* ── Dark mode overrides ── */
+
+/* Container */
+[data-theme="dark"] .bytemd {
+  background-color: transparent;
+  color: rgba(245, 248, 255, 0.96);
+  border-color: rgba(140, 165, 200, 0.22);
+}
+
+/* Toolbar */
+[data-theme="dark"] .bytemd-toolbar {
+  background-color: #1a2332;
+  border-bottom-color: rgba(140, 165, 200, 0.18);
+}
+[data-theme="dark"] .bytemd-toolbar-icon {
+  color: rgba(216, 224, 238, 0.84);
+}
+[data-theme="dark"] .bytemd-toolbar-icon:hover {
+  background-color: rgba(132, 154, 190, 0.15);
+}
+[data-theme="dark"] .bytemd-toolbar-icon.bytemd-tippy-right {
+  border-left-color: rgba(140, 165, 200, 0.18);
+}
+
+/* CodeMirror editor pane */
+[data-theme="dark"] .bytemd-editor .CodeMirror {
+  background-color: #0d1117;
+  color: rgba(245, 248, 255, 0.96);
+}
+[data-theme="dark"] .bytemd-editor .CodeMirror-cursor {
+  border-left-color: rgba(245, 248, 255, 0.9);
+}
+[data-theme="dark"] .bytemd-editor .CodeMirror-selected {
+  background: rgba(91, 140, 255, 0.2);
+}
+[data-theme="dark"] .bytemd-editor .CodeMirror-focused .CodeMirror-selected {
+  background: rgba(91, 140, 255, 0.3);
+}
+[data-theme="dark"] .bytemd-editor .CodeMirror-gutters {
+  background-color: #0d1117;
+  border-right-color: rgba(140, 165, 200, 0.12);
+}
+[data-theme="dark"] .bytemd-editor .CodeMirror-linenumber {
+  color: rgba(175, 188, 210, 0.4);
+}
+[data-theme="dark"] .bytemd-editor .CodeMirror-activeline-background {
+  background: rgba(132, 154, 190, 0.08);
+}
+
+/* Preview pane */
+[data-theme="dark"] .bytemd-preview {
+  background-color: #0d1117;
+}
+
+/* Split divider */
+[data-theme="dark"] .bytemd-split .bytemd-editor {
+  border-right-color: rgba(140, 165, 200, 0.18);
+}
+
+/* Status bar */
+[data-theme="dark"] .bytemd-status {
+  background-color: #1a2332;
+  border-top-color: rgba(140, 165, 200, 0.18);
+  color: rgba(175, 188, 210, 0.72);
+}
+
+/* Dropdown menus (heading picker, etc.) */
+[data-theme="dark"] .bytemd-dropdown {
+  background-color: #1a2332;
+  border-color: rgba(140, 165, 200, 0.22);
+  color: rgba(245, 248, 255, 0.96);
+}
+[data-theme="dark"] .bytemd-dropdown-item:hover {
+  background-color: rgba(132, 154, 190, 0.15);
+}
+
+/* Sidebar / help panel */
+[data-theme="dark"] .bytemd-sidebar {
+  background-color: #1a2332;
+  border-left-color: rgba(140, 165, 200, 0.18);
+  color: rgba(245, 248, 255, 0.96);
+}
+[data-theme="dark"] .bytemd-sidebar-close:hover {
+  color: rgba(245, 248, 255, 0.96);
+}
+
+/* Fullscreen tip */
+[data-theme="dark"] .bytemd-tip {
+  background-color: #1a2332;
+  border-color: rgba(140, 165, 200, 0.22);
+  color: rgba(216, 224, 238, 0.84);
+}
+
+/* Tooltips (tippy) */
+[data-theme="dark"] .bytemd-tippy .tippy-box {
+  background-color: #1a2332;
+  color: rgba(245, 248, 255, 0.96);
 }

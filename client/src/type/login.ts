@@ -1,9 +1,10 @@
 export interface RegisterRequest {
-    email: string;
-    password: string;
-  }
-  
-  export interface PasswordLoginRequest {
-    email: string;
-    password: string;
-  }
+  email: string;
+  password: string;
+  inviteCode?: string;
+}
+
+export interface PasswordLoginRequest {
+  email: string;
+  password: string;
+}

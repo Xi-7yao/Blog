@@ -31,6 +31,7 @@
   --brand-primary-soft-strong: rgba(47, 111, 237, 0.22);
   --hero-glow-left: rgba(58, 123, 213, 0.12);
   --hero-glow-right: rgba(244, 114, 182, 0.1);
+  --input-background: #ffffff;
 }
 
 html {
@@ -72,6 +73,7 @@ body {
   --brand-primary-soft-strong: rgba(91, 140, 255, 0.28);
   --hero-glow-left: rgba(41, 84, 189, 0.15);
   --hero-glow-right: rgba(87, 38, 122, 0.12);
+  --input-background: rgba(132, 154, 190, 0.18);
 }
 
 a {
@@ -152,8 +154,3 @@ body {
   background-color: rgba(13, 17, 23, 0.6);
 }
 
-[data-theme="dark"] .bytemd {
-  background-color: transparent;
-  color: rgba(245, 248, 255, 0.96);
-  border-color: rgba(140, 165, 200, 0.22);
-}
